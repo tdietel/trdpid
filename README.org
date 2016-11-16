@@ -1,0 +1,16 @@
+* Reconstruction [rec]
+** extraction of TRD digits from a raw file
+   rec/rec_digits.C
+
+   Reads a raw data file and extracts the TRD digits into a file
+   TRD.Digits.root. Can be used to re-run the MCM emulator and for
+   detailed PID and other studies.
+
+
+** full reconstruction
+   rec/rec.C
+
+   This runs the full reconstruction. This script was taken from
+   alien:///alice/cern.ch/user/a/alidaq/LHC13f/rec.C. The only
+   modification is that TRD digits should be recorded as well. 
+
