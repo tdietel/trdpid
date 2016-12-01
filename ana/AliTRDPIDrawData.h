@@ -27,6 +27,7 @@
 
 class TTreeStream;
 class AliInputEventHandler;
+class AliTRDdigitsManager;
 class TArrayF;
 
 class TFile;
@@ -62,6 +63,7 @@ class AliTRDPIDrawData : public AliAnalysisTaskSE {
   AliTRDPIDrawData(const char *name = "trd_pid_tree");
   virtual ~AliTRDPIDrawData();
   virtual void   UserCreateOutputObjects();
+  virtual Bool_t UserNotify();
   virtual void   UserExec(Option_t *);
   virtual void   Process(AliESDEvent *const esdEvent=0);
   virtual void   Terminate(const Option_t*);
@@ -99,6 +101,9 @@ class AliTRDPIDrawData : public AliAnalysisTaskSE {
   TObjArray *fV0electrons;             //! array with pointer to identified particles from V0 decays (electrons)
   TObjArray *fV0pions;                 //! array with pointer to identified particles from V0 decays (pions)
 
+  void ReadDigits();
+  void WriteDigits();
+  
   void WriteRaw();
   void SetupV0qa();
   void FillV0PIDlist();
@@ -124,8 +129,13 @@ class AliTRDPIDrawData : public AliAnalysisTaskSE {
 
   TBits fCollisionSystem;              //! Collision System;
 
+  TFile* fDigitsInputFile;             //! Digits file for reading
+  TFile* fDigitsOutputFile;            //! Digits file for writing
 
+  Int_t fEventNoInFile;
 
+  AliTRDdigitsManager* fDigMan;        //! digits manager
+  
   // Histograms
   TH1F *fhtrackCuts;                 //! Track and Event Cuts - QA
   TH2F *fhArmenteros;                 //! 2D V0 QA Hist

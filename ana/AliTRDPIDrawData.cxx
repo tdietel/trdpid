@@ -23,7 +23,6 @@
 
 
 #include "AliTRDPIDrawData.h"
-#include "TChain.h"
 #include "AliAnalysisManager.h"
 #include "AliESDEvent.h"
 #include "AliESDtrack.h"
@@ -33,6 +32,11 @@
 #include "AliESDv0.h"
 #include "AliCentrality.h"
 
+#include "AliTRDdigitsManager.h"
+#include "AliTRDarrayADC.h"
+
+#include "TChain.h"
+#include "TFile.h"
 
 class TCanvas;
 class TAxis;
@@ -60,12 +64,18 @@ AliTRDPIDrawData::AliTRDPIDrawData(const char *name)
     : AliAnalysisTaskSE(name), fV0tags(0x0), fV0cuts(0x0), fV0electrons(0x0), fV0pions(0x0), 
     fESDEvent(0), fOutputContainer(0), fESDtrackCuts(0),
     fESDtrackCutsV0(0), fListQATRD(0x0), fListQATRDV0(0x0),
-    fNumTagsStored(0), fCollisionSystem(3) 
+    fNumTagsStored(0), fCollisionSystem(3),
+    fDigitsInputFile(0), fDigitsOutputFile(0),
+    fEventNoInFile(-1), fDigMan(0)
 {
   //fhtrackCuts(0), fhNumberEle(0),fhNumberEleCut(0),fhNumberEleCutp(0), fhNumberPion(0),fhNumberPionCut(0),fhNumberPionCutp(0), fhCent(0), fhEv(0), fhArmenteros(0)
   //
   // Constructor
   //
+
+  fDigMan = new AliTRDdigitsManager;
+  fDigMan->CreateArrays();
+
   DefineInput(0, TChain::Class());
   DefineOutput(1, TList::Class());
 
@@ -80,6 +90,11 @@ AliTRDPIDrawData::~AliTRDPIDrawData()
   // Destructor
   //
 
+    delete fDigitsInputFile;
+    delete fDigitsOutputFile;
+
+    delete fDigMan;
+    
     delete fV0cuts;
     delete fV0electrons;
     delete fV0pions;
@@ -169,6 +184,26 @@ void AliTRDPIDrawData::UserCreateOutputObjects()
 
 }
 
+//_____________________________________________________________________________
+Bool_t AliTRDPIDrawData::UserNotify()
+{
+  delete fDigitsInputFile;
+  delete fDigitsOutputFile;
+  
+  AliESDInputHandler *esdH = dynamic_cast<AliESDInputHandler*> (AliAnalysisManager::GetAnalysisManager()->GetInputEventHandler());
+  
+  TString ofname = esdH->GetInputFileName();
+  TString ifname = ofname;
+
+  ifname.ReplaceAll("AliESDs.root", "TRD.Digits.root");
+  ofname.ReplaceAll("AliESDs.root", "TRD.FltDigits.root");
+
+  fDigitsInputFile  = new TFile(ifname);
+  fDigitsOutputFile = new TFile(ofname,"RECREATE");
+  
+  fEventNoInFile = 0;
+  
+}
 
 //_____________________________________________________________________________
 void AliTRDPIDrawData::UserExec(Option_t *)
@@ -189,14 +224,15 @@ void AliTRDPIDrawData::UserExec(Option_t *)
     FillV0PIDlist();
     //
     Process(fESDEvent);
-    //
-
 
     PostData(1,fListQATRD);
 
     // Clear the V0 PID arrays
     ClearV0PIDlist();
 
+    // increment the event counter for this file
+    fEventNoInFile++;
+    
 }
 
 
@@ -214,8 +250,13 @@ void AliTRDPIDrawData::Process(AliESDEvent *const esdEvent)
   }
   fhEv->Fill(3,1);
   
- 
+  Bool_t keepEvent = kFALSE;
+  Bool_t keepDet[540];
 
+  for (Int_t i=0; i<540; i++) {
+    keepDet[i] = kFALSE;
+  }
+  
   Float_t centralityFper=99;
 
   AliCentrality *esdCentrality = esdEvent->GetCentrality();
@@ -287,7 +328,10 @@ void AliTRDPIDrawData::Process(AliESDEvent *const esdEvent)
       for(Int_t i=0;i<6;i++){
         if(PassTrackCuts(track,i)) counterpiont[i]++;
       }
-      WriteRaw();
+
+      //WriteRaw();
+      keepEvent = kTRUE;
+
       // counterpion++;
       if((track->GetP()>1.2)&&(track->GetP()<4)&&(PassTrackCuts(track,3))) counterpionp++;
     }
@@ -304,12 +348,69 @@ void AliTRDPIDrawData::Process(AliESDEvent *const esdEvent)
       fhNumberPionEventCutp->Fill(centralityFper,1);
     }
 
-   
 
+    if (keepEvent) {
 
+      // dummy decision which detectors to keep, just to check
+      // rejection; adjust the increment to emulate different
+      // cuts
+      for (Int_t i=0; i<540; i+=1) {
+	keepDet[i] = kTRUE;
+      }
+
+      // load the digits from TRD.Digits.root
+      ReadDigits();
+
+      // get rid of data from chambers that are not used
+      for (Int_t det=0; det<540; det++) {
+	if ( ! keepDet[det] ) {
+	  fDigMan->ClearArrays(det);
+	  fDigMan->ClearIndexes(det);
+	  fDigMan->GetDigits(det)->Expand();
+	  fDigMan->GetDigits(det)->Reset();
+	  fDigMan->GetDigits(det)->Compress();
+    
+	}
+      }      
+      
+      // store the digits in TRD.FltDigits.root
+      WriteDigits();
+    }
+    
     PostData(1,fListQATRD);
 }
-  
+
+
+//________________________________________________________________________
+void AliTRDPIDrawData::ReadDigits()
+{
+  TTree* tr = (TTree*)fDigitsInputFile->Get(Form("Event%d/TreeD",
+						 fEventNoInFile));
+  for (Int_t det=0; det<540; det++) {
+    fDigMan->ClearArrays(det);
+    fDigMan->ClearIndexes(det);
+  }
+
+  fDigMan->ReadDigits(tr);
+  delete tr;
+}
+
+//________________________________________________________________________
+void AliTRDPIDrawData::WriteDigits()
+{
+  TDirectory* evdir =
+    fDigitsOutputFile->mkdir(Form("Event%d", fEventNoInFile),
+			     Form("Event%d", fEventNoInFile));
+
+  evdir->Write();
+  evdir->cd();
+
+  TTree* tr = new TTree("TreeD", "TreeD");
+  fDigMan->MakeBranch(tr);
+  fDigMan->WriteDigits();
+  delete tr;
+}
+
 //________________________________________________________________________
 void AliTRDPIDrawData::WriteRaw()
 {
