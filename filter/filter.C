@@ -1,4 +1,4 @@
-void ana()
+void filter()
 {
   // for includes use either global setting in $HOME/.rootrc
   // ACLiC.IncludePaths: -I$(ALICE_ROOT)/include
@@ -16,6 +16,10 @@ void ana()
   gSystem->Load("libANALYSIS");
   gSystem->Load("libANALYSISalice");
 
+  
+  gSystem->Load("libPWGPP.so"); 
+
+  
   gROOT->LoadMacro("CreateESDChain.C");
   TChain* chain = CreateESDChain("files.txt", 1, 0, kFALSE, kTRUE);
 
@@ -33,35 +37,41 @@ void ana()
   handler->SetReadTR(kFALSE);
   mgr->SetMCtruthEventHandler(handler);
 
-
   
-  // Create digits filter (df) task
+  gROOT->LoadMacro(Form("%s/PWGPP/TRD/macros/AddTRDdigitsFilter.C",
+			gSystem->Getenv("ALICE_PHYSICS")));
 
-  gROOT->LoadMacro("AliTRDPIDrawData.cxx+g");
-  AliAnalysisTask *taskdf = new AliTRDPIDrawData("PIDrawData");
-
-  // Add task(s)
-  mgr->AddTask(taskdf);
-
-  // Create containers for input/output
-  AliAnalysisDataContainer *cinput = mgr->GetCommonInputContainer();
-  AliAnalysisDataContainer *coutputdf =
-    mgr->CreateContainer("cdigflt", TList::Class(),   
-			 AliAnalysisManager::kOutputContainer,
-			 "DigitsFilter.root");
-
-  // Connect input/output
-  mgr->ConnectInput(taskdf, 0, cinput);
-
-  // No need to connect to a common AOD output container if the task does not
-  // fill AOD info.
-  //  mgr->ConnectOutput(task, 0, coutput0);
-  mgr->ConnectOutput(taskdf, 1, coutputdf);
-  cout << "done" << endl;
+  AddTRDdigitsFilter(0);
   
-  // Enable debug printouts
-  mgr->SetDebugLevel(2);
-
+  
+//  // Create digits filter (df) task
+//
+//  gROOT->LoadMacro("AliTRDdigitsFilter.cxx+g");
+//  AliAnalysisTask *taskdf = new AliTRDdigitsFilter("DigitsFilter");
+//
+//  // Add task(s)
+//  mgr->AddTask(taskdf);
+//
+//  // Create containers for input/output
+//  AliAnalysisDataContainer *cinput = mgr->GetCommonInputContainer();
+//  AliAnalysisDataContainer *coutputdf =
+//    mgr->CreateContainer("cdigflt", TList::Class(),   
+//			 AliAnalysisManager::kOutputContainer,
+//			 "DigitsFilter.root");
+//
+//  // Connect input/output
+//  mgr->ConnectInput(taskdf, 0, cinput);
+//
+//  // No need to connect to a common AOD output container if the task does not
+//  // fill AOD info.
+//  //  mgr->ConnectOutput(task, 0, coutput0);
+//  mgr->ConnectOutput(taskdf, 1, coutputdf);
+//  cout << "done" << endl;
+//  
+//  // Enable debug printouts
+//  mgr->SetDebugLevel(2);
+//
+  
   if (!mgr->InitAnalysis()) return;
   mgr->PrintStatus();
   mgr->StartAnalysis("local", chain);

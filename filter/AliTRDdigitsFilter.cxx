@@ -63,7 +63,7 @@ ClassImp(AliTRDdigitsFilter)
 AliTRDdigitsFilter::AliTRDdigitsFilter(const char *name)
     : AliAnalysisTaskSE(name), fV0tags(0x0), fV0cuts(0x0), fV0electrons(0x0), fV0pions(0x0), 
     fESDEvent(0), fOutputContainer(0), fESDtrackCuts(0),
-    fESDtrackCutsV0(0), fListQATRD(0x0), fListQATRDV0(0x0),
+    fESDtrackCutsV0(0), fListQA(0x0),
     fNumTagsStored(0), fCollisionSystem(3),
     fDigitsInputFile(0), fDigitsOutputFile(0),
     fEventNoInFile(-1), fDigMan(0)
@@ -75,6 +75,16 @@ AliTRDdigitsFilter::AliTRDdigitsFilter(const char *name)
 
   fDigMan = new AliTRDdigitsManager;
   fDigMan->CreateArrays();
+
+  fSpeciesDesc[0] = "ElecAll";
+  fSpeciesDesc[1] = "ElecAcc";
+  fSpeciesDesc[2] = "PionAll";
+  fSpeciesDesc[3] = "PionAcc";
+
+  fSpeciesDescLong[0] = "All Electrons";
+  fSpeciesDescLong[1] = "Accepted Electrons";
+  fSpeciesDescLong[2] = "All Pions";
+  fSpeciesDescLong[3] = "Accepted Pions";
 
   DefineInput(0, TChain::Class());
   DefineOutput(1, TList::Class());
@@ -133,26 +143,22 @@ void AliTRDdigitsFilter::UserCreateOutputObjects()
   //
   // V0 QA histograms
   //
-  fhArmenteros  = new TH2F("fhArmenteros","Armenteros plot",200,-1.,1.,200,0.,0.4);
-  fListQATRDV0->Add(fhArmenteros);
+  fhArmenteros  = new TH2F("Armenteros","Armenteros plot",
+			   200,-1.,1.,200,0.,0.4);
+  fListQA->Add(fhArmenteros);
 
   // statistics of accepted events
   fhEventCuts = new TH1F("EventCuts","statistics of event cuts",10,0.,10.);
   fListQA->Add(fhEventCuts);
 
-  // pT histograms of (all : accepted) (electrons : pions)
-   = new TH1F("EventCuts","statistics of event cuts",10,0.,10.);
-  fListQA->Add(fhEventCuts);
-
-  fhPtElecAll = new TH1F("fhPtElecAll", "pT spectrum of ALL electrons", 200, 0., 20.);
-  fhPtElecAcc = new TH1F("fhPtElecAcc", "pT spectrum of ACCEPTED electrons", 200, 0., 20.);
-  fhPtPionAll = new TH1F("fhPtPionAll", "pT spectrum of ALL pions", 200, 0., 20.);
-  fhPtPionAcc = new TH1F("fhPtPionAcc", "pT spectrum of ACCEPTED pions", 200, 0., 20.);
+  for (int i=0; i<fgkNSpecies; i++) {
   
-  fListQA->Add(fhPtElecAll);
-  fListQA->Add(fhPtElecAcc);
-  fListQA->Add(fhPtPionAll);
-  fListQA->Add(fhPtPionAcc);
+    // pT histograms
+    fhPt[i] = new TH1F("fhPt"+fSpeciesDesc[i],
+		       "pT spectrum of "+fSpeciesDescLong[i],
+		       200, 0., 20.);
+    fListQA->Add(fhPt[i]);
+  }
 
   
 //  
@@ -220,7 +226,8 @@ Bool_t AliTRDdigitsFilter::UserNotify()
   fDigitsOutputFile = new TFile(ofname,"RECREATE");
   
   fEventNoInFile = 0;
-  
+
+  return kTRUE;
 }
 
 //_____________________________________________________________________________
@@ -237,8 +244,6 @@ void AliTRDdigitsFilter::UserExec(Option_t *)
     }
     else fESDEvent = (AliESDEvent *) esdH->GetEvent();
     
-    if(fESDEvent) fhEv->Fill(1,1);
-
     FillV0PIDlist();
     //
     Process(fESDEvent);
@@ -258,145 +263,117 @@ void AliTRDdigitsFilter::UserExec(Option_t *)
 //________________________________________________________________________
 void AliTRDdigitsFilter::Process(AliESDEvent *const esdEvent)
 {
-    //
-    //called for each event
-    //
+  //
+  //called for each event
+  //
 
+  fhEventCuts->Fill(0);
+  
   if (!esdEvent) {
     Printf("ERROR: esdEvent not available"); 
     return;
   }
-  fhEv->Fill(3,1);
-  
-  Bool_t keepEvent = kFALSE;
-  Bool_t keepDet[540];
 
-  for (Int_t i=0; i<540; i++) {
-    keepDet[i] = kFALSE;
-  }
+  fhEventCuts->Fill(1);
 
-  // TODO: centrality framework: candidate for removal  
-  Float_t centralityFper=99;
-
-  AliCentrality *esdCentrality = esdEvent->GetCentrality();
-  centralityFper = esdCentrality->GetCentralityPercentile("V0M");
-  if(centralityFper==0.0) return;
-
+  //
+  // check for a valid event vertex
+  //
   const AliESDVertex* fESDEventvertex = esdEvent->GetPrimaryVertexTracks(); 
   if (!fESDEventvertex)
     return;
-
  
   Int_t ncontr = fESDEventvertex->GetNContributors();
-
   if (ncontr <= 0) return;
- 
 
-  // printf("numbers %f %f \n",centralityFper,fV0electrons->GetEntries());
-  if(fV0electrons->GetEntries()>0){
-    fhNumberEle->Fill(centralityFper,fV0electrons->GetEntries());
-    fhNumberEleEvent->Fill(centralityFper,1);
+  fhEventCuts->Fill(2);
+ 				    
+  //
+  // set up flags to keep/reject event
+  //
+  Bool_t hasElectron  = kFALSE; // event has any electron  
+  Bool_t keepElectron = kFALSE; // electrons passed cuts and will be kept
+
+  Bool_t hasPion      = kFALSE; // event has any pion
+  Bool_t keepPion     = kFALSE; // pion will be kept
+
+  Bool_t keepDet[540];
+
+  // flags for individual detectors
+  for (Int_t i=0; i<540; i++) {
+    keepDet[i] = kTRUE; // always keep all detectors
+    //keepDet[i] = kFALSE; // keep only flagged detectors -> not implemented
   }
-  if((fhNumberPion)&&(fV0pions->GetEntries()>0)) fhNumberPion->Fill(centralityFper,fV0pions->GetEntries());
-  if(fhCent) fhCent->Fill(centralityFper);
 
-  
-				    
-  Int_t counterele=0;
-  Int_t counterelep=0;
-  Int_t counterelet[6];
-  for(Int_t i=0;i<6;i++) counterelet[i]=0;
-  
   // - Begin: track loop for electrons from V0 -
-    for(Int_t itrack = 0; itrack < fV0electrons->GetEntries(); itrack++){
-    //  AliVTrack *track=(AliVTrack*)fV0electrons->At(itrack);
-      AliESDtrack *track=(AliESDtrack*)fV0electrons->At(itrack);
+  for(Int_t itrack = 0; itrack < fV0electrons->GetEntries(); itrack++){
 
-      for(Int_t i=0;i<6;i++){
-        if(PassTrackCuts(track,i)&&PassTrackPIDCuts(track)) counterelet[i]++;
-      }
-	fhTPCsignalvsp->Fill(track->GetP(),track->GetTPCsignal());
-     
-      if(PassTrackCuts(track,3)&&PassTrackPIDCuts(track)){
-	if((track->GetP()>1.2)&&(track->GetP()<4)) counterelep++;
-	//	fhTPCsignalvsp->Fill(track->GetP(),track->GetTPCsignal());
-      }
-
-    } // - End: track loop for electrons from V0 -
+    hasElectron = kTRUE;
     
-    for(Int_t i=0;i<6;i++){
-      if(counterelet[i]>0) fhNumberEleCut[i]->Fill(centralityFper,counterelet[i]);
-      if(counterelet[i]>0) fhNumberEleEventCut[i]->Fill(centralityFper,1);
-    }
-    if(counterelep>0) {
-      fhNumberEleCutp->Fill(centralityFper,counterelep);
-      fhNumberEleEventCutp->Fill(centralityFper,1);
-    }
+    AliESDtrack *track=(AliESDtrack*)fV0electrons->At(itrack);
 
-    // Int_t counterpion=0;
-  Int_t counterpionp=0;
-  Int_t counterpiont[6];
-  for(Int_t i=0;i<6;i++) counterpiont[i]=0;
+    fhPt[kElecAll]->Fill(track->GetP());
+
+    // TODO: TCP dE/dx plot 
+    //fhTPCsignalvsp->Fill(track->GetP(),track->GetTPCsignal());
+     
+    if ( ! PassTrackCuts(track,3) ) continue;
+    //if ( ! PassTrackPIDCuts(track) ) continue;
+    if ( track->GetP() < 1.2 ) continue;
+
+    keepElectron = kTRUE;
+    fhPt[kElecAcc]->Fill(track->GetP());
+  } // - End: track loop for electrons from V0 -
+    
   
   // - Begin: track loop for pions from V0 -
-    for(Int_t itrack = 0; itrack < fV0pions->GetEntries(); itrack++){
-	//       AliVTrack *track=(AliVTrack*)fV0pions->At(itrack);
-	AliESDtrack *track=(AliESDtrack*)fV0pions->At(itrack);
+  for(Int_t itrack = 0; itrack < fV0pions->GetEntries(); itrack++){
+
+    hasElectron = kTRUE;
+    
+    AliESDtrack *track=(AliESDtrack*)fV0pions->At(itrack);
+
+    // QA histos
+    fhPt[kPionAll]->Fill(track->GetP());
+
+    if ( ! PassTrackCuts(track,3) ) continue;
+    //if ( ! PassTrackPIDCuts(track) ) continue;
+    if ( track->GetP() < 1.9 ) continue;
+
+    keepPion = kTRUE;
+    fhPt[kPionAcc]->Fill(track->GetP());
+
+  }
+
+
+  if (keepElectron) fhEventCuts->Fill(4);
+  if (keepPion) fhEventCuts->Fill(5);
+
+  
+  if (keepElectron || keepPion) {
+
+    fhEventCuts->Fill(6);
+    
+    // load the digits from TRD.Digits.root
+    ReadDigits();
+    
+    // get rid of data from chambers that are not used
+    for (Int_t det=0; det<540; det++) {
+      if ( ! keepDet[det] ) {
+	fDigMan->ClearArrays(det);
+	fDigMan->ClearIndexes(det);
+	fDigMan->GetDigits(det)->Expand();
+	fDigMan->GetDigits(det)->Reset();
+	fDigMan->GetDigits(det)->Compress();
 	
-	//	 if(!PassTrackCuts(track)) continue;
-      for(Int_t i=0;i<6;i++){
-        if(PassTrackCuts(track,i)) counterpiont[i]++;
       }
-
-      //WriteRaw();
-      keepEvent = kTRUE;
-
-      // counterpion++;
-      if((track->GetP()>1.2)&&(track->GetP()<4)&&(PassTrackCuts(track,3))) counterpionp++;
-    }
-    //  if(fhNumberPionCut) fhNumberPionCut->Fill(centralityFper,counterpion);
-    //if(fhNumberPionCutp) fhNumberPionCutp->Fill(centralityFper,counterpionp);
-    for(Int_t i=0;i<6;i++){
-      if(counterpiont[i]>0){
-	fhNumberPionCut[i]->Fill(centralityFper,counterpiont[i]);
-        fhNumberPionEventCut[i]->Fill(centralityFper,1);
-      }
-    }
-    if(counterpionp>0) {
-      fhNumberPionCutp->Fill(centralityFper,counterpionp);
-      fhNumberPionEventCutp->Fill(centralityFper,1);
-    }
-
-
-    if (keepEvent) {
-
-      // dummy decision which detectors to keep, just to check
-      // rejection; adjust the increment to emulate different
-      // cuts
-      for (Int_t i=0; i<540; i+=1) {
-	keepDet[i] = kTRUE;
-      }
-
-      // load the digits from TRD.Digits.root
-      ReadDigits();
-
-      // get rid of data from chambers that are not used
-      for (Int_t det=0; det<540; det++) {
-	if ( ! keepDet[det] ) {
-	  fDigMan->ClearArrays(det);
-	  fDigMan->ClearIndexes(det);
-	  fDigMan->GetDigits(det)->Expand();
-	  fDigMan->GetDigits(det)->Reset();
-	  fDigMan->GetDigits(det)->Compress();
+    }      
     
-	}
-      }      
-      
-      // store the digits in TRD.FltDigits.root
-      WriteDigits();
-    }
-    
-    PostData(1,fListQA);
+    // store the digits in TRD.FltDigits.root
+    WriteDigits();
+  }
+  
+  PostData(1,fListQA);
 }
 
 
@@ -564,8 +541,8 @@ Bool_t AliTRDdigitsFilter::PassTrackPIDCuts(AliESDtrack *fESDTrack)
     // check if tracks pass minimum quality critieria
     //
     if(!fESDTrack) return kFALSE;
-    if(fESDTrack->GetTPCsignal()<85) kFALSE;
-    if(fESDTrack->GetTPCsignal()>115) kFALSE;
+    if(fESDTrack->GetTPCsignal()<85) return kFALSE;
+    if(fESDTrack->GetTPCsignal()>115) return kFALSE;
     return kTRUE;
 }
 

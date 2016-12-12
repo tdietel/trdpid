@@ -127,6 +127,8 @@ class AliTRDdigitsFilter : public AliAnalysisTaskSE {
  
   Int_t fNumTagsStored;                //! Number of entries of fV0tags
 
+  TBits fCollisionSystem;              //! Collision System;
+  
   TFile* fDigitsInputFile;             //! Digits file for reading
   TFile* fDigitsOutputFile;            //! Digits file for writing
 
@@ -139,10 +141,20 @@ class AliTRDdigitsFilter : public AliAnalysisTaskSE {
 
   TH1F *fhEventCuts;                  //! statistics of event cuts
 
-  TH1F *fhPtElecAll;                  //! pT spectrum of ALL electrons
-  TH1F *fhPtElecAcc;                  //! pT spectrum of ACCEPTED electrons
-  TH1F *fhPtPionAll;                  //! pT spectrum of ALL pions
-  TH1F *fhPtPionAcc;                  //! pT spectrum of ACCEPTED pions
+  static const Int_t fgkNSpecies = 4;
+  typedef enum {
+    kElecAll = 0,
+    kElecAcc = 1,
+    kPionAll = 2,
+    kPionAcc = 3
+  } ESpecies_t;
+
+  TString fSpeciesDesc[fgkNSpecies];
+  TString fSpeciesDescLong[fgkNSpecies];
+  
+  TH1F *fhPt[fgkNSpecies];            //! pT spectrum for different species
+
+
   
 //  TH2F *fhNumberEle;
 //  TH1F *fhNumberEleEvent;

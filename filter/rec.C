@@ -11,6 +11,8 @@ void rec(const char *filename="raw.root")
   AliCDBManager * man = AliCDBManager::Instance();
   man->SetDefaultStorage("alien://folder=/alice/data/2016/OCDB");
 
+  AliLog::SetClassDebugLevel("AliTRDReconstructor", 1);
+  
   AliReconstruction rec;
 
   // Set reconstruction flags (skip detectors here if neded with -<detector name>
@@ -48,11 +50,11 @@ void rec(const char *filename="raw.root")
   rec.SetStopOnError(kFALSE);
 
   // keep digits for TRD
-  rec->SetOption("TRD", "dc");
+  rec.SetOption("TRD", "cw,dc");
 
   
   // Delete recpoints
-  rec->SetDeleteRecPoints("TPC TRD");
+  rec.SetDeleteRecPoints("TPC TRD");
 
   // Set 100% of friends
   // rec.SetFractionFriends(2.0);
