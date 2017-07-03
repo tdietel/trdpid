@@ -1,4 +1,22 @@
+* Introduction
+
+This repository is meant as a collection and working area for stuff
+going into PID studies for the ALICE TRD. It is mainly a collection of
+my personal work, but I might pull in other people's work as I see
+fit.
+
+Some code has been moved from here to AliRoot and AliPhysics, to be
+used in production. 
+
+In the following you will find some hints what some parts of the
+software are supposed to do. 
+
+
 * Reconstruction [rec]
+
+Reconstruct data (or simulated) files. This is e.g. necessary if you
+want to prepare some raw data files to play with raw data filtering.
+
 ** extraction of TRD digits from a raw file
    rec/rec_digits.C
 
@@ -14,3 +32,14 @@
    alien:///alice/cern.ch/user/a/alidaq/LHC13f/rec.C. The only
    modification is that TRD digits should be recorded as well. 
 
+* Filtering [filter]
+
+This part deals with raw data filtering for TRD PID studies. The
+purpose of this is to get a reasonable sample of raw data from
+high-pT electrons, that can be used to optimize the PID.
+
+A large part of this is now available in AliPhysics, and this is
+mainly an example how to call these parts. The main work is done in
+the class AliTRDdigitsFilter (in
+$ALICE_PHYSICS/PWGPP/TRD/AliTRDdigitsFilter), which is instantiated by 
+$ALICE_PHYSICS/PWGPP/TRD/macros/AddTRDdigitsFilter.C).
