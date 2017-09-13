@@ -5,14 +5,20 @@
 // Authors: Tom Dietel
 // based on the AliAnalysisTaskPt
 
-class TH1F;
 class AliESDEvent;
+class AliTRDdigitsManager;
 
 #include "AliAnalysisTaskSE.h"
 
 class AliTRDdigitsTask : public AliAnalysisTaskSE {
 public:
-  AliTRDdigitsTask() : AliAnalysisTaskSE(), fESD(0), fOutputList(0), fHistPt(0) {}
+  AliTRDdigitsTask()
+    : AliAnalysisTaskSE(),
+      fDigMan(0), fGeo(0),
+      fESD(0), fOutputList(0),
+      fDigitsInputFileName("TRD.Digits.root"),
+      fDigitsInputFile(0), fDigitsOutputFile(0)
+  {}
   AliTRDdigitsTask(const char *name);
   virtual ~AliTRDdigitsTask() {}
   
@@ -21,31 +27,38 @@ public:
   virtual void   UserExec(Option_t *option);
   virtual void   Terminate(Option_t *);
 
-  void SetDigitsInputFilename(TString x)
+  void SetDigitsInputFilename(TString x) {fDigitsInputFileName=x;}
+  void SetDigitsOutputFilename(TString x) {fDigitsOutputFileName=x;}
   
 protected:
 
   void ReadDigits();
   void WriteDigits();
 
-  AliTRDdigitsManager* fDigMan;        //! digits manager
+  AliTRDtrackV1* FindTRDtrackV1(AliESDfriendTrack* friendtrack);
 
+  AliTRDdigitsManager* fDigMan; //! digits manager
+  AliTRDgeometry* fGeo; //! TRD geometry
 
   
 private:
   AliESDEvent *fESD;    //! ESD object
   TList       *fOutputList; //! Output list
-  TH1F        *fHistAdcSpectrum; //! TRD ADC spectrum
-  TH2F        *fHistPadResponse; //! (pseudo) pad response function
+  TH1*        fhTrackCuts;  //! track cut statistics
+  TH1*        fhPtAll; //!
+  TH1*        fhPtTRD; //!
+  TH1*        fhTrdAdc; //!
 
-  TFile* fDigitsInputFileName;         //! Name of digits file for reading
-  TFile* fDigitsOutputFileName;        //! Name of digits file for writing
+  //TH1F        *fHistAdcSpectrum; //! TRD ADC spectrum
+  //TH2F        *fHistPadResponse; //! (pseudo) pad response function
+
+  TString fDigitsInputFileName;         //! Name of digits file for reading
+  TString fDigitsOutputFileName;        //! Name of digits file for writing
   
   TFile* fDigitsInputFile;             //! Digits file for reading
   TFile* fDigitsOutputFile;            //! Digits file for writing
 
   Int_t fEventNoInFile;
-
   
   AliTRDdigitsTask(const AliTRDdigitsTask&); // not implemented
   AliTRDdigitsTask& operator=(const AliTRDdigitsTask&); // not implemented

@@ -1,3 +1,4 @@
+#include "TFile.h"
 #include "TChain.h"
 #include "TTree.h"
 #include "TH1F.h"
@@ -18,7 +19,14 @@
 #include "AliTRDtrackV1.h"
 #include "AliTRDseedV1.h"
 
+#include "AliTRDdigitsManager.h"
+#include "AliTRDarrayADC.h"
+
 #include "AliTRDdigitsTask.h"
+
+#include <iostream>
+#include <iomanip>
+using namespace std;
 
 // example of an analysis task creating a p_t spectrum
 // Authors: Panos Cristakoglou, Jan Fiete Grosse-Oetringhaus, Christian Klein-Boesing
@@ -28,7 +36,10 @@ ClassImp(AliTRDdigitsTask)
 
 //________________________________________________________________________
 AliTRDdigitsTask::AliTRDdigitsTask(const char *name) 
-  : AliAnalysisTaskSE(name), fESD(0), fOutputList(0), fHistPt(0)
+: AliAnalysisTaskSE(name), fDigMan(0), fGeo(0), fESD(0), fOutputList(0),
+  fDigitsInputFileName("TRD.Digits.root"),
+  fDigitsOutputFileName(""),
+  fDigitsInputFile(), fDigitsOutputFile(0)
 {
   // Constructor
 
@@ -38,15 +49,16 @@ AliTRDdigitsTask::AliTRDdigitsTask(const char *name)
   // Output slot #0 id reserved by the base class for AOD
   // Output slot #1 writes into a TH1 container
   DefineOutput(1, TList::Class());
-}
 
-//________________________________________________________________________
-void AliTRDdigitsTask::UserCreateOutputObjects()
-{
-  // Create histograms
-  // Called once
-
-  fOutputList = new TList();
+  // create the digits manager
+  fDigMan = new AliTRDdigitsManager;
+  fDigMan->CreateArrays();
+  
+  // the geometry could be created in the constructor or similar
+  fGeo = new AliTRDgeometry;
+  if (! fGeo) {
+    AliFatal("cannot create geometry ");
+  }
 
 }
 
@@ -61,10 +73,10 @@ Bool_t AliTRDdigitsTask::UserNotify()
   if ( fDigitsInputFileName != "" ) {
     TString ifname = esdH->GetInputFileName();
     ifname.ReplaceAll("AliESDs.root", fDigitsInputFileName);
-    AliInfo(Form("opening digits file %s for reading", ifname));
+    AliInfo("opening digits file " + ifname + " for reading");
     fDigitsInputFile = new TFile(ifname);
     if (!fDigitsInputFile) {
-      AliWarning(Form("digits input file '%s' cannot be opened", ofname));
+      AliWarning("digits input file '" + ifname + "' cannot be opened");
     }
   } else {
     fDigitsInputFile = NULL;
@@ -73,10 +85,10 @@ Bool_t AliTRDdigitsTask::UserNotify()
   if ( fDigitsOutputFileName != "" ) {
     TString ofname = esdH->GetInputFileName();
     ofname.ReplaceAll("AliESDs.root", fDigitsOutputFileName);
-    AliInfo(Form("opening digits file %s for writing", ofname));
+    AliInfo("opening digits file " + ofname + " for writing");
     fDigitsOutputFile = new TFile(ofname);
     if (!fDigitsOutputFile) {
-      AliWarning(Form("digits output file '%s' cannot be opened", ofname));
+      AliWarning("digits output file '" + ofname + "' cannot be opened");
     }
   } else {
     fDigitsOutputFile = NULL;
@@ -86,6 +98,31 @@ Bool_t AliTRDdigitsTask::UserNotify()
 
   return kTRUE;
 }
+
+
+//________________________________________________________________________
+void AliTRDdigitsTask::UserCreateOutputObjects()
+{
+  // Create histograms
+  // Called once
+
+  fOutputList = new TList();
+
+  fhTrackCuts = new TH1F("hTrackCuts","TrackCuts QA",10,-0.5,9.5);
+  fOutputList->Add(fhTrackCuts);
+		   
+  fhPtAll = new TH1F("hPtAll", "pT spectrum - all tracks", 200, 0., 20.);
+  fOutputList->Add(fhPtAll);
+
+  fhPtTRD = new TH1F("hPtTRD", "pT spectrum - TRD tracks", 200, 0., 20.);
+  fOutputList->Add(fhPtTRD);
+
+  fhTrdAdc = new TH1F("hTrdAdc", "TRD ADC spectrum", 1024, -0.5, 1023.5);
+  fOutputList->Add(fhTrdAdc);
+
+  PostData(1, fOutputList);
+}
+
 
 
 //________________________________________________________________________
@@ -105,6 +142,8 @@ void AliTRDdigitsTask::UserExec(Option_t *)
 
   printf("There are %d tracks in this event\n", fESD->GetNumberOfTracks());
 
+
+  
 //  AliMCEvent* mcEvent = MCEvent();
 //  if (!mcEvent) {
 //    Printf("ERROR: Could not retrieve MC event");
@@ -128,29 +167,69 @@ void AliTRDdigitsTask::UserExec(Option_t *)
 //  cout << "# of friend tracks: " << fESDfriend->GetNumberOfTracks() << endl;
 //  
 //
-//  // -----------------------------------------------------------------
-//  // Track loop to fill a pT spectrum
-//  for (Int_t iTracks = 0; iTracks < fESD->GetNumberOfTracks(); iTracks++) {
-//
-//    cout << "------------------------------------" << endl;
-//    cout << "track " << iTracks << endl;
-//
-//
-//
-//    // ---------------------------------------------------------------
-//    // gather track information
-//    AliESDtrack* track = fESD->GetTrack(iTracks);
-//    if (!track) {
-//      printf("ERROR: Could not receive track %d\n", iTracks);
-//      continue;
-//    }
-//
-//    AliESDfriendTrack* friendtrack = fESDfriend->GetTrack(iTracks);
-//    if (!friendtrack) {
-//      printf("ERROR: Could not receive frienttrack %d\n", iTracks);
-//      continue;
-//    }
-//    
+ // -----------------------------------------------------------------
+ // Track loop to fill a pT spectrum
+ for (Int_t iTracks = 0; iTracks < fESD->GetNumberOfTracks(); iTracks++) {
+
+   fhTrackCuts->Fill(0);
+   
+   // ---------------------------------------------------------------
+   // gather track information
+   AliESDtrack* track = fESD->GetTrack(iTracks);
+   if (!track) {
+     printf("ERROR: Could not receive track %d\n", iTracks);
+     continue;
+   }
+   fhTrackCuts->Fill(1);
+   fhPtAll->Fill(track->Pt());
+   
+   AliESDfriendTrack* friendtrack = fESDfriend->GetTrack(iTracks);
+   if (!friendtrack) {
+     printf("ERROR: Could not receive friend track %d\n", iTracks);
+     continue;
+   }
+   fhTrackCuts->Fill(2);
+
+   
+   AliTRDtrackV1* trdtrack = FindTRDtrackV1(friendtrack);
+   if (!trdtrack) {
+     // this happens often, because not all tracks reach the TRD
+     //printf("NOTICE: Could not receive TRD track %d\n", iTracks);
+     continue;
+   }
+   fhTrackCuts->Fill(3);
+   fhPtTRD->Fill(track->Pt());
+
+
+   //printf("------------------------------------\n"); 
+   //printf("track %6d\n", iTracks);
+ }
+
+ 
+ ReadDigits();
+ for (int det=0; det<540; det++) {
+
+   if (!fDigMan->GetDigits(det)) {
+     AliWarning(Form("No digits found for detector %d", det));
+     continue;
+   }
+   
+   AliTRDpadPlane* padplane = fGeo->GetPadPlane(det);
+   if (!padplane) {
+     AliError(Form("AliTRDpadPlane for detector %d not found",det));
+     continue;
+   }
+
+   for (int row=0; row < padplane->GetNrows(); row++) {
+     for (int col=0; col < padplane->GetNcols(); col++) {
+       for (int tb=0; tb < fDigMan->GetDigits(det)->GetNtime(); tb++) {
+	 fhTrdAdc->Fill(fDigMan->GetDigitAmp(row,col,tb,det));
+       }
+     }
+   }
+ }
+	 
+   
 //    if (!track->GetInnerParam()) {
 //      cerr << "ERROR: no inner param" << endl;
 //      continue;
@@ -169,16 +248,36 @@ void AliTRDdigitsTask::UserExec(Option_t *)
 //      continue;
 //    }
 //
-//    // find AliTRDtrackV1
-//    TObject* fCalibObject = 0;
-//    AliTRDtrackV1* trdTrack = 0;
-//    // find TRD track
-//    int icalib=0;
-//    while ((fCalibObject = (TObject*)(friendtrack->GetCalibObject(icalib++)))){
-//      if(strcmp(fCalibObject->IsA()->GetName(), "AliTRDtrackV1") != 0)
-//	continue;
-//      trdTrack = (AliTRDtrackV1 *)fCalibObject;
-//    }
+ 
+ fEventNoInFile++;
+ PostData(1, fOutputList);
+   
+}      
+
+
+  
+//________________________________________________________________________
+AliTRDtrackV1* AliTRDdigitsTask::FindTRDtrackV1(AliESDfriendTrack* friendtrack) 
+{
+  if (!friendtrack) {
+    AliWarning("ERROR: Could not receive friend track");
+    return NULL;
+  }
+
+  // find AliTRDtrackV1
+  TObject* fCalibObject = 0;
+  AliTRDtrackV1* trdTrack = 0;
+  // find TRD track
+  int icalib=0;
+  while ((fCalibObject = (TObject*)(friendtrack->GetCalibObject(icalib++)))){
+    if(strcmp(fCalibObject->IsA()->GetName(), "AliTRDtrackV1") != 0)
+      continue;
+    trdTrack = (AliTRDtrackV1 *)fCalibObject;
+  }
+
+  return trdTrack;
+}
+
 //
 //    
 //    // ---------------------------------------------------------------
@@ -293,27 +392,26 @@ void AliTRDdigitsTask::UserExec(Option_t *)
 //
 //  delete geo;
 //
-  
-  PostData(1, fOutputList);
-}      
+
+
 //________________________________________________________________________
 void AliTRDdigitsTask::Terminate(Option_t *) 
 {
   // Draw result to the screen
   // Called once at the end of the query
 
-  fOutputList = dynamic_cast<TList*> (GetOutputData(1));
-  if (!fOutputList) {
-    printf("ERROR: Output list not available\n");
-    return;
-  }
-  
-  fHistPt = dynamic_cast<TH1F*> (fOutputList->At(0));
-  if (!fHistPt) {
-    printf("ERROR: fHistPt not available\n");
-    return;
-  }
-   
+//  fOutputList = dynamic_cast<TList*> (GetOutputData(1));
+//  if (!fOutputList) {
+//    printf("ERROR: Output list not available\n");
+//    return;
+//  }
+//  
+//  fHistPt = dynamic_cast<TH1F*> (fOutputList->At(0));
+//  if (!fHistPt) {
+//    printf("ERROR: fHistPt not available\n");
+//    return;
+//  }
+//   
   //TCanvas *c1 = new TCanvas("AliTRDdigitsTask","Pt",10,10,510,510);
   //c1->cd(1)->SetLogy();
   //fHistPt->DrawCopy("E");
@@ -323,28 +421,54 @@ void AliTRDdigitsTask::Terminate(Option_t *)
 //________________________________________________________________________
 void AliTRDdigitsTask::ReadDigits()
 {
+
+  if (!fDigMan) {
+    AliError("no digits manager");
+    return;
+  }
+  
   // reset digit arrays
   for (Int_t det=0; det<540; det++) {
     fDigMan->ClearArrays(det);
     fDigMan->ClearIndexes(det);
   }
 
+
+  if (!fDigitsInputFile) {
+    AliError("digits file not available");
+    return;
+  }
+
+  
   // read digits from file
   TTree* tr = (TTree*)fDigitsInputFile->Get(Form("Event%d/TreeD",
                                                  fEventNoInFile));
+
+  if (!fDigitsInputFile) {
+    AliError(Form("digits tree for event %d not found", fEventNoInFile));
+    return;
+  }
+
   fDigMan->ReadDigits(tr);
   delete tr;
 
   // expand digits for use in this task
   for (Int_t det=0; det<540; det++) {
-    fDigMan->GetDigits(det)->Expand();
+    if (fDigMan->GetDigits(det)) {
+      fDigMan->GetDigits(det)->Expand();
+    }
   }
 }
 
 //________________________________________________________________________
 void AliTRDdigitsTask::WriteDigits()
 {
-
+  // check for output file
+  if (!fDigitsOutputFile) {
+    AliError("digits output file not available");
+    return;
+  }
+  
   // compress digits for storage
   for (Int_t det=0; det<540; det++) {
     fDigMan->GetDigits(det)->Expand();
