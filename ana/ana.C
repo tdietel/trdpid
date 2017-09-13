@@ -28,39 +28,45 @@ void train()
   mgr->SetInputEventHandler(esdH);
 
   // Enable MC event handler
-  AliMCEventHandler* handler = new AliMCEventHandler;
-  handler->SetReadTR(kFALSE);
-  mgr->SetMCtruthEventHandler(handler);
+  //  AliMCEventHandler* handler = new AliMCEventHandler;
+  //handler->SetReadTR(kFALSE);
+  //mgr->SetMCtruthEventHandler(handler);
 
 
+  cout << "creating analysis tasks..." << endl;
+
+  //AliAnalysisTask *task = new AliTRDdigitsFilter("DigitsFilter");
+  //mgr->AddTask(task);
   
-  // Create task
+  // Create and add task
+  gROOT->LoadMacro("../ana/AliTRDdigitsTask.cxx+g");
+  AliAnalysisTask *task = new AliTRDdigitsTask("DigitsTask");
+  mgr->AddTask(task);
 
-  gROOT->LoadMacro("AliTRDPIDrawData.cxx+g");
-  AliAnalysisTask *taskpid = new AliTRDPIDrawData("PIDrawData");
-
-  // Add task(s)
-  mgr->AddTask(taskpid);
-
-
+  cout << "connecting data containers..." << endl;
+  
   // Create containers for input/output
   AliAnalysisDataContainer *cinput = mgr->GetCommonInputContainer();
-  AliAnalysisDataContainer *coutputpt = mgr->CreateContainer("chistpt", TList::Class(),   
-      AliAnalysisManager::kOutputContainer, "Pt.ESD.1.root");
+  AliAnalysisDataContainer *cdigitqa =
+    mgr->CreateContainer("cdigitqa", TList::Class(),   
+			 AliAnalysisManager::kOutputContainer,
+			 "DigitsQA.1.root");
 
   // Connect input/output
-  mgr->ConnectInput(taskpid, 0, cinput);
+  mgr->ConnectInput(task, 0, cinput);
 
   // No need to connect to a common AOD output container if the task does not
   // fill AOD info.
   //  mgr->ConnectOutput(task, 0, coutput0);
-  mgr->ConnectOutput(taskpid, 1, coutputpt);
+  mgr->ConnectOutput(task, 1, cdigitqa);
 
 
   // Enable debug printouts
   mgr->SetDebugLevel(2);
 
+  cout << "initialize and run analyses..." << endl;
+  
   if (!mgr->InitAnalysis()) return;
   mgr->PrintStatus();
-  mgr->StartAnalysis("local", chain);
+  mgr->StartAnalysis("local", chain,1000);
 }
