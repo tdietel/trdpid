@@ -1,4 +1,4 @@
-void train()
+void ana()
 {
   gSystem->Load("libTree.so");
   gSystem->Load("libGeom.so");
@@ -39,7 +39,7 @@ void train()
   //mgr->AddTask(task);
   
   // Create and add task
-  gROOT->LoadMacro("../ana/AliTRDdigitsTask.cxx+g");
+  gROOT->LoadMacro("AliTRDdigitsTask.cxx+g");
   AliAnalysisTask *task = new AliTRDdigitsTask("DigitsTask");
   mgr->AddTask(task);
 
