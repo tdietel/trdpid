@@ -9,7 +9,7 @@ void rec(const char *filename="raw.root")
   
   // Set the CDB storage location
   AliCDBManager * man = AliCDBManager::Instance();
-  man->SetDefaultStorage("alien://folder=/alice/data/2013/OCDB");
+  man->SetDefaultStorage("local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB");
 
   AliReconstruction rec;
 
@@ -43,13 +43,13 @@ void rec(const char *filename="raw.root")
   rec.SetStopOnError(kFALSE);
 
   // Set 100% of friends
-  // rec.SetFractionFriends(1.0);
+  rec.SetFractionFriends(1.0);
 
   // keep digits for TRD
-  rec.SetOption("TRD", "dc");
+  rec.SetOption("TRD", "cw,dc");
   
   // Delete recpoints
-  rec->SetDeleteRecPoints("TPC");
+  rec->SetDeleteRecPoints("TPC TRD");
 
   AliLog::Flush();
   rec.Run();
