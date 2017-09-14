@@ -94,7 +94,7 @@ Bool_t AliTRDdigitsTask::UserNotify()
     fDigitsOutputFile = NULL;
   }
   
-  fEventNoInFile = 0;
+  fEventNoInFile = -1;
 
   return kTRUE;
 }
@@ -131,6 +131,9 @@ void AliTRDdigitsTask::UserExec(Option_t *)
   // Main loop
   // Called for each event
 
+  // update event counter for access to digits
+  fEventNoInFile++;
+  
 
   // -----------------------------------------------------------------
   // prepare event data structures
@@ -142,93 +145,111 @@ void AliTRDdigitsTask::UserExec(Option_t *)
 
   printf("There are %d tracks in this event\n", fESD->GetNumberOfTracks());
 
+  if (fESD->GetNumberOfTracks() == 0) {
+    // skip empty event
+    return;
+  }
 
+  // make digits available
+  ReadDigits();
+   
+  
   
 //  AliMCEvent* mcEvent = MCEvent();
 //  if (!mcEvent) {
 //    Printf("ERROR: Could not retrieve MC event");
 //    return;
 //  }
-//
-//  // the geometry could be created in the constructor or similar
-//  AliTRDgeometry * geo = new AliTRDgeometry;
-//  if (! geo) {
-//    cerr << "cannot create geometry " << endl;
-//    return;
-//  }
-//    
-//
-//  
 //  Printf("MC particles: %d", mcEvent->GetNumberOfTracks());
 //
 //  
-//  cout << "ESD friend:" << fESDfriend << endl;
-//
-//  cout << "# of friend tracks: " << fESDfriend->GetNumberOfTracks() << endl;
-//  
-//
- // -----------------------------------------------------------------
- // Track loop to fill a pT spectrum
- for (Int_t iTracks = 0; iTracks < fESD->GetNumberOfTracks(); iTracks++) {
 
-   fhTrackCuts->Fill(0);
-   
-   // ---------------------------------------------------------------
-   // gather track information
-   AliESDtrack* track = fESD->GetTrack(iTracks);
-   if (!track) {
-     printf("ERROR: Could not receive track %d\n", iTracks);
-     continue;
-   }
-   fhTrackCuts->Fill(1);
-   fhPtAll->Fill(track->Pt());
-   
-   AliESDfriendTrack* friendtrack = fESDfriend->GetTrack(iTracks);
-   if (!friendtrack) {
-     printf("ERROR: Could not receive friend track %d\n", iTracks);
-     continue;
-   }
-   fhTrackCuts->Fill(2);
+  
+  // -----------------------------------------------------------------
+  // Track loop to fill a pT spectrum
+  for (Int_t iTracks = 0; iTracks < fESD->GetNumberOfTracks(); iTracks++) {
+    
+    fhTrackCuts->Fill(0);
+    
+    // ---------------------------------------------------------------
+    // gather track information
+    AliESDtrack* track = fESD->GetTrack(iTracks);
+    if (!track) {
+      printf("ERROR: Could not receive track %d\n", iTracks);
+      continue;
+    }
+    fhTrackCuts->Fill(1);
+    fhPtAll->Fill(track->Pt());
+    
+    AliESDfriendTrack* friendtrack = fESDfriend->GetTrack(iTracks);
+    if (!friendtrack) {
+      printf("ERROR: Could not receive friend track %d\n", iTracks);
+      continue;
+    }
+    fhTrackCuts->Fill(2);
+    
+    
+    AliTRDtrackV1* trdtrack = FindTRDtrackV1(friendtrack);
+    if (!trdtrack) {
+      // this happens often, because not all tracks reach the TRD
+      //printf("NOTICE: Could not receive TRD track %d\n", iTracks);
+      continue;
+    }
+    fhTrackCuts->Fill(3);
+    fhPtTRD->Fill(track->Pt());
+    
+    for (int ly=0;ly<6;ly++) {
+      Int_t det,row,col;
+      if (FindTrackletPos(trdtrack, ly, &det,&row,&col) < 0) {
+	// no tracklet found in this layer
+	continue;
+      }
 
-   
-   AliTRDtrackV1* trdtrack = FindTRDtrackV1(friendtrack);
-   if (!trdtrack) {
-     // this happens often, because not all tracks reach the TRD
-     //printf("NOTICE: Could not receive TRD track %d\n", iTracks);
-     continue;
-   }
-   fhTrackCuts->Fill(3);
-   fhPtTRD->Fill(track->Pt());
+      cout << "Found tracklet at "
+	   << det << ":" << row << ":" << col << endl;
 
+      int np = 5;
+      if ( col-np < 0 || col+np >= 144 )
+	continue;
+      
+      for (int c = col-np; c<=col+np;c++) {
+	cout << "  " << setw(3) << c << " ";
+	for (int t=0; t<fDigMan->GetDigits(det)->GetNtime(); t++) {
+	  cout << setw(4) << fDigMan->GetDigitAmp(row,c,t,det);
+	}
+	cout << endl;
+      }
+    }
+    
 
-   //printf("------------------------------------\n"); 
-   //printf("track %6d\n", iTracks);
- }
+    
+    //printf("------------------------------------\n"); 
+    //printf("track %6d\n", iTracks);
+  }
 
  
- ReadDigits();
- for (int det=0; det<540; det++) {
+  for (int det=0; det<540; det++) {
 
-   if (!fDigMan->GetDigits(det)) {
-     AliWarning(Form("No digits found for detector %d", det));
-     continue;
-   }
-   
-   AliTRDpadPlane* padplane = fGeo->GetPadPlane(det);
-   if (!padplane) {
-     AliError(Form("AliTRDpadPlane for detector %d not found",det));
-     continue;
-   }
-
-   for (int row=0; row < padplane->GetNrows(); row++) {
-     for (int col=0; col < padplane->GetNcols(); col++) {
-       for (int tb=0; tb < fDigMan->GetDigits(det)->GetNtime(); tb++) {
-	 fhTrdAdc->Fill(fDigMan->GetDigitAmp(row,col,tb,det));
-       }
-     }
-   }
- }
-	 
+    if (!fDigMan->GetDigits(det)) {
+      AliWarning(Form("No digits found for detector %d", det));
+      continue;
+    }
+    
+    AliTRDpadPlane* padplane = fGeo->GetPadPlane(det);
+    if (!padplane) {
+      AliError(Form("AliTRDpadPlane for detector %d not found",det));
+      continue;
+    }
+    
+    for (int row=0; row < padplane->GetNrows(); row++) {
+      for (int col=0; col < padplane->GetNcols(); col++) {
+	for (int tb=0; tb < fDigMan->GetDigits(det)->GetNtime(); tb++) {
+	  fhTrdAdc->Fill(fDigMan->GetDigitAmp(row,col,tb,det));
+	}
+      }
+    }
+  }
+  
    
 //    if (!track->GetInnerParam()) {
 //      cerr << "ERROR: no inner param" << endl;
@@ -249,9 +270,7 @@ void AliTRDdigitsTask::UserExec(Option_t *)
 //    }
 //
  
- fEventNoInFile++;
- PostData(1, fOutputList);
-   
+  PostData(1, fOutputList);
 }      
 
 
@@ -346,32 +365,48 @@ AliTRDtrackV1* AliTRDdigitsTask::FindTRDtrackV1(AliESDfriendTrack* friendtrack)
 //
 //
 //
-//    
-//    // loop over tracklets
-//    for(Int_t itr = 0; itr < 6; ++itr) {
-//
-//      AliTRDseedV1* tracklet = 0;
-//
-//      if(!(tracklet = trdTrack->GetTracklet(itr)))
-//	continue;
-//      if(!tracklet->IsOK())
-//	continue;
-//
-//
-//      AliTRDpadPlane *padplane = geo->GetPadPlane(tracklet->GetDetector());
-//      
-//      cout << "    tracklet: " << tracklet->GetDetector()
-//	   << ":" << padplane->GetPadRowNumber(tracklet->GetZ())
-//	   << ":" << padplane->GetPadColNumber(tracklet->GetY())
-//	   << "   "
-//	   << tracklet->GetX() << " / "
-//	   << tracklet->GetY() << " / "
-//	   << tracklet->GetZ() 
-//	   << endl;
-//
-//    }
-//    
-//    
+
+Int_t AliTRDdigitsTask::FindTrackletPos(AliTRDtrackV1* trdTrack,
+					Int_t layer,
+					Int_t* det, Int_t* row, Int_t* col)
+{
+
+  // loop over tracklets
+  for(Int_t itr = 0; itr < 6; ++itr) {
+    
+    AliTRDseedV1* tracklet = 0;
+    
+    if(!(tracklet = trdTrack->GetTracklet(itr)))
+      continue;
+    if(!tracklet->IsOK())
+      continue;
+    
+    if ( tracklet->GetDetector()%6 == layer ) {
+
+    
+      AliTRDpadPlane *padplane = fGeo->GetPadPlane(tracklet->GetDetector());
+
+      *det = tracklet->GetDetector();
+      *row = padplane->GetPadRowNumber(tracklet->GetZ());
+      *col = padplane->GetPadColNumber(tracklet->GetY());
+      
+      cout << "    tracklet: " << tracklet->GetDetector()
+	   << ":" << padplane->GetPadRowNumber(tracklet->GetZ())
+	   << ":" << padplane->GetPadColNumber(tracklet->GetY())
+	   << "   "
+	   << tracklet->GetX() << " / "
+	   << tracklet->GetY() << " / "
+	   << tracklet->GetZ() 
+	   << endl;
+
+      return 0;
+    }
+  }
+
+  return -1; // no tracklet found
+  
+}  
+    
 //    // AliTrackPoint tp;
 //    // for (int ip=0; ip<array->GetNPoints(); ip++) {
 //    //   array->GetPoint(tp,ip);

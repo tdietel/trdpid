@@ -40,6 +40,9 @@ protected:
   AliTRDdigitsManager* fDigMan; //! digits manager
   AliTRDgeometry* fGeo; //! TRD geometry
 
+
+  Int_t FindTrackletPos(AliTRDtrackV1* trdTrack, Int_t layer,
+			Int_t* det, Int_t* row, Int_t* col);
   
 private:
   AliESDEvent *fESD;    //! ESD object
