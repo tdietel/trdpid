@@ -63,7 +63,7 @@ AliTRDdigitsTask::AliTRDdigitsTask(const char *name)
 }
 
 //_______________________________________________________________________
-TFile* AliTRDdigitsExtract::OpenDigitsFile(TString inputfile,
+TFile* AliTRDdigitsTask::OpenDigitsFile(TString inputfile,
                                            TString digfile,
                                            TString opt)
 {
