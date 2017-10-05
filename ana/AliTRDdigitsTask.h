@@ -16,8 +16,8 @@ public:
     : AliAnalysisTaskSE(),
       fDigMan(0), fGeo(0),
       fESD(0), fOutputList(0),
-      fDigitsInputFileName("TRD.Digits.root"),
-      fDigitsInputFile(0), fDigitsOutputFile(0)
+      fDigitsInputFileName("TRD.Digits.root"), fDigitsInputFile(0),
+      fDigitsOutputFileName(""), fDigitsOutputFile(0)
   {}
   AliTRDdigitsTask(const char *name);
   virtual ~AliTRDdigitsTask() {}
@@ -32,17 +32,16 @@ public:
   
 protected:
 
-  void ReadDigits();
-  void WriteDigits();
-
   AliTRDtrackV1* FindTRDtrackV1(AliESDfriendTrack* friendtrack);
-
-  AliTRDdigitsManager* fDigMan; //! digits manager
-  AliTRDgeometry* fGeo; //! TRD geometry
-
 
   Int_t FindTrackletPos(AliTRDtrackV1* trdTrack, Int_t layer,
 			Int_t* det, Int_t* row, Int_t* col);
+
+
+  TFile* OpenDigitsFile(TString inputfile, TString digfile, TString opt);
+  void ReadDigits();
+  void WriteDigits();
+
   
 private:
   AliESDEvent *fESD;    //! ESD object
@@ -56,11 +55,13 @@ private:
   //TH2F        *fHistPadResponse; //! (pseudo) pad response function
 
   TString fDigitsInputFileName;         //! Name of digits file for reading
+  TFile*  fDigitsInputFile;             //! Digits file for reading
   TString fDigitsOutputFileName;        //! Name of digits file for writing
-  
-  TFile* fDigitsInputFile;             //! Digits file for reading
-  TFile* fDigitsOutputFile;            //! Digits file for writing
+  TFile*  fDigitsOutputFile;            //! Digits file for writing
 
+  AliTRDdigitsManager* fDigMan; //! digits manager
+  AliTRDgeometry* fGeo; //! TRD geometry
+  
   Int_t fEventNoInFile;
   
   AliTRDdigitsTask(const AliTRDdigitsTask&); // not implemented

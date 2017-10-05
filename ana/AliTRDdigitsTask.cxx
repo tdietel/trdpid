@@ -54,7 +54,7 @@ AliTRDdigitsTask::AliTRDdigitsTask(const char *name)
   fDigMan = new AliTRDdigitsManager;
   fDigMan->CreateArrays();
   
-  // the geometry could be created in the constructor or similar
+  // create a TRD geometry, needed for matching digits to tracks
   fGeo = new AliTRDgeometry;
   if (! fGeo) {
     AliFatal("cannot create geometry ");
@@ -63,37 +63,50 @@ AliTRDdigitsTask::AliTRDdigitsTask(const char *name)
 }
 
 //_______________________________________________________________________
+TFile* AliTRDdigitsExtract::OpenDigitsFile(TString inputfile,
+                                           TString digfile,
+                                           TString opt)
+{
+  // we should check if we are reading ESDs or AODs - for now, only
+  // ESDs are supported
+
+  if (digfile == "") {
+    return NULL;
+  }
+
+  // construct the name of the digits file from the input file
+  inputfile.ReplaceAll("AliESDs.root", digfile);
+
+  // open the file
+  AliInfo( "opening digits file " + inputfile
+           + " with option \"" + opt + "\"");
+  TFile* dfile = new TFile(inputfile, opt);
+  if (!dfile) {
+    AliWarning("digits file '" + inputfile + "' cannot be opened");
+  }
+
+  return dfile;
+}
+
+
+//_______________________________________________________________________
 Bool_t AliTRDdigitsTask::UserNotify()
 {
   delete fDigitsInputFile;
   delete fDigitsOutputFile;
 
-  AliESDInputHandler *esdH = dynamic_cast<AliESDInputHandler*> (AliAnalysisManager::GetAnalysisManager()->GetInputEventHandler());
+  AliESDInputHandler *esdH = dynamic_cast<AliESDInputHandler*>
+    (AliAnalysisManager::GetAnalysisManager()->GetInputEventHandler());
 
-  if ( fDigitsInputFileName != "" ) {
-    TString ifname = esdH->GetInputFileName();
-    ifname.ReplaceAll("AliESDs.root", fDigitsInputFileName);
-    AliInfo("opening digits file " + ifname + " for reading");
-    fDigitsInputFile = new TFile(ifname);
-    if (!fDigitsInputFile) {
-      AliWarning("digits input file '" + ifname + "' cannot be opened");
-    }
-  } else {
-    fDigitsInputFile = NULL;
-  }
+  if ( ! esdH ) return kFALSE;
+  if ( ! esdH->GetTree() ) return kFALSE;
+  if ( ! esdH->GetTree()->GetCurrentFile() ) return kFALSE;
 
-  if ( fDigitsOutputFileName != "" ) {
-    TString ofname = esdH->GetInputFileName();
-    ofname.ReplaceAll("AliESDs.root", fDigitsOutputFileName);
-    AliInfo("opening digits file " + ofname + " for writing");
-    fDigitsOutputFile = new TFile(ofname);
-    if (!fDigitsOutputFile) {
-      AliWarning("digits output file '" + ofname + "' cannot be opened");
-    }
-  } else {
-    fDigitsOutputFile = NULL;
-  }
-  
+  TString fname = esdH->GetTree()->GetCurrentFile()->GetName();
+
+  fDigitsInputFile  = OpenDigitsFile(fname,fDigitsInputFileName,"");
+  fDigitsOutputFile = OpenDigitsFile(fname,fDigitsOutputFileName,"RECREATE");
+
   fEventNoInFile = -1;
 
   return kTRUE;
@@ -197,6 +210,12 @@ void AliTRDdigitsTask::UserExec(Option_t *)
     }
     fhTrackCuts->Fill(3);
     fhPtTRD->Fill(track->Pt());
+
+    if (track->Pt() < 1.5) continue;
+    
+    cout << " ====== TRACK " << iTracks
+	 << "   pT = " << track->Pt()
+	 << " GeV ======" << endl;
     
     for (int ly=0;ly<6;ly++) {
       Int_t det,row,col;
