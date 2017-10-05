@@ -34,8 +34,12 @@ protected:
 
   AliTRDtrackV1* FindTRDtrackV1(AliESDfriendTrack* friendtrack);
 
-  Int_t FindTrackletPos(AliTRDtrackV1* trdTrack, Int_t layer,
-			Int_t* det, Int_t* row, Int_t* col);
+  Int_t FindDigitsTrkl(const AliTRDtrackV1* trdTrack, Int_t layer,
+		       Int_t* det, Int_t* row, Int_t* col);
+  
+  Int_t FindDigits(const AliExternalTrackParam* param,
+		   Float_t bfield, Int_t layer,
+		   Int_t* det, Int_t* row, Int_t* col);
 
 
   TFile* OpenDigitsFile(TString inputfile, TString digfile, TString opt);

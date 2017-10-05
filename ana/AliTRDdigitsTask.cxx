@@ -64,8 +64,8 @@ AliTRDdigitsTask::AliTRDdigitsTask(const char *name)
 
 //_______________________________________________________________________
 TFile* AliTRDdigitsTask::OpenDigitsFile(TString inputfile,
-                                           TString digfile,
-                                           TString opt)
+					TString digfile,
+					TString opt)
 {
   // we should check if we are reading ESDs or AODs - for now, only
   // ESDs are supported
@@ -208,36 +208,61 @@ void AliTRDdigitsTask::UserExec(Option_t *)
       //printf("NOTICE: Could not receive TRD track %d\n", iTracks);
       continue;
     }
+
+    if (trdtrack->GetNumberOfTracklets() == 0) {
+      continue;
+    }
+    
     fhTrackCuts->Fill(3);
     fhPtTRD->Fill(track->Pt());
 
     if (track->Pt() < 1.5) continue;
+
+    if ( ! track->GetOuterParam() ) {
+      AliWarning(Form("Track %d has no OuterParam", iTracks));
+      continue;
+    }
+      
     
     cout << " ====== TRACK " << iTracks
 	 << "   pT = " << track->Pt()
-	 << " GeV ======" << endl;
+	 << " GeV, " << trdtrack->GetNumberOfTracklets()
+	 << " tracklets ======" << endl;
     
     for (int ly=0;ly<6;ly++) {
       Int_t det,row,col;
-      if (FindTrackletPos(trdtrack, ly, &det,&row,&col) < 0) {
+      if (FindDigitsTrkl(trdtrack, ly, &det,&row,&col) < 0) {
 	// no tracklet found in this layer
 	continue;
       }
 
-      cout << "Found tracklet at "
-	   << det << ":" << row << ":" << col << endl;
 
-      int np = 5;
-      if ( col-np < 0 || col+np >= 144 )
-	continue;
+      Int_t det2,row2,col2;
+      FindDigits(track->GetOuterParam(),
+		 fESD->GetMagneticField(), ly,
+		 &det2,&row2,&col2);
       
-      for (int c = col-np; c<=col+np;c++) {
-	cout << "  " << setw(3) << c << " ";
-	for (int t=0; t<fDigMan->GetDigits(det)->GetNtime(); t++) {
-	  cout << setw(4) << fDigMan->GetDigitAmp(row,c,t,det);
+
+      cout << endl;
+
+	      
+      if (0) {
+	cout << "Found tracklet at "
+	     << det << ":" << row << ":" << col << endl;
+	
+	int np = 5;
+	if ( col-np < 0 || col+np >= 144 )
+	  continue;
+	
+	for (int c = col-np; c<=col+np;c++) {
+	  cout << "  " << setw(3) << c << " ";
+	  for (int t=0; t<fDigMan->GetDigits(det)->GetNtime(); t++) {
+	    cout << setw(4) << fDigMan->GetDigitAmp(row,c,t,det);
+	  }
+	  cout << endl;
 	}
-	cout << endl;
       }
+      
     }
     
 
@@ -385,9 +410,51 @@ AliTRDtrackV1* AliTRDdigitsTask::FindTRDtrackV1(AliESDfriendTrack* friendtrack)
 //
 //
 
-Int_t AliTRDdigitsTask::FindTrackletPos(AliTRDtrackV1* trdTrack,
-					Int_t layer,
-					Int_t* det, Int_t* row, Int_t* col)
+Int_t AliTRDdigitsTask::FindDigits(const AliExternalTrackParam* paramp,
+				   Float_t bfield, Int_t layer,
+				   Int_t* det, Int_t* row, Int_t* col)
+{
+
+  // create a copy of the track params that we can propagate around
+  AliExternalTrackParam par = *paramp;
+
+  // find the sector
+  Int_t sector = int(floor(par.GetAlpha()/TMath::Pi()*9.));
+  if (sector<0) sector += 18;
+
+  if ( ! par.PropagateTo(fGeo->GetTime0(layer), bfield) ) {
+    AliWarning("Failed to propagate track param");
+    return -1;
+  }
+      
+  
+  Int_t st  = fGeo->GetStack(par.GetZ(),layer);
+  *det = 30*sector + 6*st + layer;
+  AliTRDpadPlane* padplane = fGeo->GetPadPlane(layer,st);
+  *row = padplane->GetPadRowNumber(par.GetZ());
+  *col = padplane->GetPadColNumber(par.GetY());
+
+  cout << "    outparam: "
+       << (*det) << ":" << (*row) << ":" << (*col) << "   "
+       << par.GetX() << " / " << par.GetY() << " / " << par.GetZ() 
+       << "    alpha=" << par.GetAlpha()/TMath::Pi()*180.
+       << "    sector=" << sector
+       << endl;
+
+
+  //      cout << "   extra: " << sector << "/" << st << "/" << ly
+//	   << "   " << dt 
+//	   <<  ":" << padplane->GetPadRowNumber(par.GetZ())
+//	   <<  ":" << padplane->GetPadColNumber(par.GetY())
+//	   << endl;
+//      
+
+}
+
+
+Int_t AliTRDdigitsTask::FindDigitsTrkl(const AliTRDtrackV1* trdTrack,
+				       Int_t layer,
+				       Int_t* det, Int_t* row, Int_t* col)
 {
 
   // loop over tracklets
