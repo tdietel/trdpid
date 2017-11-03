@@ -11,17 +11,32 @@ void ana()
   gSystem->Load("libANALYSIS");
   gSystem->Load("libANALYSISalice");
 
-  gROOT->LoadMacro("CreateESDChain.C");
-  TChain* chain = CreateESDChain("files.txt", 1, 0, kFALSE, kTRUE);
+
+  // ---------------------------------------------------------------
+  // create the TChain to loop over
+
+  TString basedir = "/alice/data/2016/LHC16q/000265377/pass1_CENT_wSDD/";
+  
+  TChain* chain = new TChain("esdTree");
+  chain->Add(basedir+"16000265377019.100/root_archive.zip#AliESDs.root");
+  chain->Add(basedir+"16000265377019.101/root_archive.zip#AliESDs.root");
+  chain->Add(basedir+"16000265377019.103/root_archive.zip#AliESDs.root");
+  
+  // // old version with external macro, not very portable
+  // gROOT->LoadMacro("CreateESDChain.C");
+  // CreateESDChain("files.txt", 1, 0, kFALSE, kTRUE);
+
+
+
 
   // for includes use either global setting in $HOME/.rootrc
   // ACLiC.IncludePaths: -I$(ALICE_ROOT)/include
   // or in each macro
   gSystem->AddIncludePath("-I$ALICE_ROOT/include");
 
+  // ---------------------------------------------------------------
   // Create the analysis manager
   AliAnalysisManager *mgr = new AliAnalysisManager("testAnalysis");
-
 
 
   AliESDInputHandler* esdH = new AliESDInputHandler();
@@ -33,14 +48,23 @@ void ana()
   //mgr->SetMCtruthEventHandler(handler);
 
 
+  // ---------------------------------------------------------------
+  // ---------------------------------------------------------------
+  // set up analysis tasks
+  // ---------------------------------------------------------------
+  // ---------------------------------------------------------------
+  // This is where your code goes
+  // ---------------------------------------------------------------
+  // ---------------------------------------------------------------
+
   cout << "creating analysis tasks..." << endl;
 
   //AliAnalysisTask *task = new AliTRDdigitsFilter("DigitsFilter");
   //mgr->AddTask(task);
   
   // Create and add task
-  gROOT->LoadMacro("AliTRDdigitsTask.cxx+g");
-  AliAnalysisTask *task = new AliTRDdigitsTask("DigitsTask");
+  AliTRDdigitsTask *task = new AliTRDdigitsTask("DigitsTask");
+  task->SetDigitsInputFilename("TRD.FltDigits.root");
   mgr->AddTask(task);
 
   cout << "connecting data containers..." << endl;
@@ -60,6 +84,9 @@ void ana()
   //  mgr->ConnectOutput(task, 0, coutput0);
   mgr->ConnectOutput(task, 1, cdigitqa);
 
+  
+  // ---------------------------------------------------------------
+  // final tweaking and run the analysis
 
   // Enable debug printouts
   mgr->SetDebugLevel(2);
