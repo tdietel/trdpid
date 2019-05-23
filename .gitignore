@@ -6,3 +6,5 @@
 .idea
 raw_data/
 datasets/
+.DS_Store
+*.pyc

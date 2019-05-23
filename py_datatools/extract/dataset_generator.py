@@ -1,23 +1,41 @@
+"""
+This script is intended to be run from the command line to generate 'datasets' (see below definition) from a directory containing
+pythonDict.txt files in any number and any depth of sub-directories.
+
+A dataset in this context constitutes a directory containing 3 things:
+
+1. Any number of track numpy arrays.
+2. The same as above number of info_set numpy arrays (See below).
+3. A single info.yaml file to help read the dataset.
+
+An info_set contains all the associated information about a track in the form of a 16 length numpy array formatted as follow
+
+label, num_tracklets, tracklet1_present, tracklet2_present, tracklet3_present, tracklet4_present, tracklet5_present, tracklet6_present, nsigmae, nsigmap, PT, dEdX, P, eta, theta, phi
+
+The tracks and info_sets of a dataset are spreak out over 1 or many files each with the naming convention 'i_tracks.npy'
+and 'i_info_set.npy.'
+"""
+
 import argparse, sys, os, shutil
 import settings
 import numpy as np
 import yaml
 
-#Usage python3 -i extract/dataset_generator.py train_small 10000 10000 note that num_electrons=-1, num_pions=-1 will result in all being exported.
+#Usage python3 extract/dataset_generator.py train_small 10000 10000 4 note that num_electrons=-1, num_pions=-1 will result in all being exported.
 
 parser=argparse.ArgumentParser()
 
 parser.add_argument("name", type=str,
                     help="Name of the dataset.")
 parser.add_argument("num_electrons", type=int,
-                    help="Name of the dataset.")
+                    help="Max number of electrons to add to the dataset, use -1 for unlimited.")
 parser.add_argument("num_pions", type=int,
-                    help="Name of the dataset.")
+                    help="Max number of pions to add to the dataset use -1 for unlimited.")
 parser.add_argument("min_tracklets", type=int,
-                    help="Minimum number of tracklets in a track.")
-parser.add_argument('--minp', help='Minimum momentum.', type=int, default=None)
-parser.add_argument('--maxp', help='Maximum momentum.', type=int, default=None)
-parser.add_argument('--num_tracks_per_file', type=int, help='Partition dataset up into files of length num_tracks_per_file.', default=1000)
+                    help="Minimum number of tracklets for a valid track. Use 0 for all tracks.")
+parser.add_argument('--minp', help='Minimum momentum.', type=float, default=settings.default_minp)
+parser.add_argument('--maxp', help='Maximum momentum.', type=float, default=settings.default_maxp)
+parser.add_argument('--num_tracks_per_file', type=int, help='Partition dataset up into files of length num_tracks_per_file. Use -1 for one file.', default=settings.default_num_tracklets_per_file)
 
 args=parser.parse_args()
 

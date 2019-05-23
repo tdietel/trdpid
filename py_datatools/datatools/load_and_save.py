@@ -54,3 +54,6 @@ def save_dataset(name, tracks, info_set, tracks_per_file, datasets_home_director
 
 	yaml.dump(info, open(output_folder + 'info.yaml', 'w'), Dumper=yaml.Dumper)
 	return info
+
+def load_whole_default_dataset():
+	return load_whole_named_dataset(settings.default_dataset)
