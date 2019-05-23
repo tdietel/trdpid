@@ -1,6 +1,6 @@
 # Python ALICE TRD data tools
 
-This package provides code to extract named datasets with specifiable filters from pythonDict files.
+This package provides code to extract and handle named datasets with specifiable filters from pythonDict files.
 
 ## Getting Started
 
@@ -19,16 +19,16 @@ This directory serves as the parent directory for any 'datasets' used in your co
 A dataset in this context constitutes a directory containing 3 types of things:
 
 1. Any number of track numpy arrays (See below).
-2. The same as above number of info_set numpy arrays (See below).
+2. ##### The same as above number of info_set numpy arrays (See below).
 3. A single info.yaml file to help read the dataset (See below).
 
 A track numpy array is a n x 6 x (settings.tracklet_shape) array of float32 numbers which represents n tracks in the way you would expect.
 
-An info_set contains all the associated information about a track in the form of a 16 length numpy array formatted as follows:
+An info_set contains all the associated information about a track in the form of a 16 length numpy array arranged as follows:
 
 label, num_tracklets, tracklet1_present, tracklet2_present, tracklet3_present, tracklet4_present, tracklet5_present, tracklet6_present, nsigmae, nsigmap, PT, dEdX, P, eta, theta, phi.
 
-The tracks and info_sets of a dataset are spread out over 1 or many files each with the naming convention 'i_tracks.npy' and 'i_info_set.npy'. The reason for this is primarily for memory considerations.
+The tracks and info_sets of a dataset are spread out over 1 or many files each with the naming convention 'i_tracks.npy' and 'i_info_set.npy'. The reason for this is primarily for future memory considerations.
 
 The info.yaml file is a human readable however still computer parse-able file which gives some overall info about the dataset.
 
@@ -36,7 +36,9 @@ The info.yaml file is a human readable however still computer parse-able file wh
 
 This script is intended to be run from the command line to generate 'datasets' (see above definition) from a directory containing pythonDict.txt files in any number and any depth of sub-directories.
 
-usage: dataset_generator.py [-h] [--minp MINP] [--maxp MAXP]
+Below is the output of `python extract/dataset_generator.py -h`
+
+```usage: dataset_generator.py [-h] [--minp MINP] [--maxp MAXP]
                             [--num_tracks_per_file NUM_TRACKS_PER_FILE]
                             name num_electrons num_pions min_tracklets
 
@@ -56,8 +58,7 @@ optional arguments:
   --num_tracks_per_file NUM_TRACKS_PER_FILE
                         Partition dataset up into files of length
                         num_tracks_per_file. Use -1 for one file.
-
-above is the output of `python extract/dataset_generator.py -h`
+```
 
 example: `python extract/dataset_generator.py test 100 100 4 --num_tracks_per_file=10`
 
@@ -77,7 +78,7 @@ Below is an example of how to produce 2 datasets (one for training and one for t
 
 1. python extract/dataset_generator.py test_all 100 100 4
 2. Set `default_dataset = 'test_all'` in settings.py
-3. Split the data up in any way you wish as for example in tests/split_dataset.py `python3 -i tests/split_dataset.py`
+3. Split the data up in any way you wish. For example in tests/split_dataset.py `python3 -i tests/split_dataset.py`.
 
 There should now be 3 new datasets in your default dataset directory.
 
