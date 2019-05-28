@@ -19,7 +19,7 @@ This directory serves as the parent directory for any 'datasets' used in your co
 A dataset in this context constitutes a directory containing 3 types of things:
 
 1. Any number of track numpy arrays (See below).
-2. ##### The same as above number of info_set numpy arrays (See below).
+2. The same as above number of info_set numpy arrays (See below).
 3. A single info.yaml file to help read the dataset (See below).
 
 A track numpy array is a n x 6 x (settings.tracklet_shape) array of float32 numbers which represents n tracks in the way you would expect.
@@ -38,7 +38,8 @@ This script is intended to be run from the command line to generate 'datasets' (
 
 Below is the output of `python extract/dataset_generator.py -h`
 
-```usage: dataset_generator.py [-h] [--minp MINP] [--maxp MAXP]
+```
+usage: dataset_generator.py [-h] [--minp MINP] [--maxp MAXP]
                             [--num_tracks_per_file NUM_TRACKS_PER_FILE]
                             name num_electrons num_pions min_tracklets
 
