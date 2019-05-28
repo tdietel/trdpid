@@ -19,7 +19,7 @@ This directory serves as the parent directory for any 'datasets' used in your co
 A dataset in this context constitutes a directory containing 3 types of things:
 
 1. Any number of track numpy arrays (See below).
-2. ##### The same as above number of info_set numpy arrays (See below).
+2. The same as above number of info_set numpy arrays (See below).
 3. A single info.yaml file to help read the dataset (See below).
 
 A track numpy array is a n x 6 x (settings.tracklet_shape) array of float32 numbers which represents n tracks in the way you would expect.
