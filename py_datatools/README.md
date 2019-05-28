@@ -38,7 +38,8 @@ This script is intended to be run from the command line to generate 'datasets' (
 
 Below is the output of `python extract/dataset_generator.py -h`
 
-```usage: dataset_generator.py [-h] [--minp MINP] [--maxp MAXP]
+```
+usage: dataset_generator.py [-h] [--minp MINP] [--maxp MAXP]
                             [--num_tracks_per_file NUM_TRACKS_PER_FILE]
                             name num_electrons num_pions min_tracklets
 
