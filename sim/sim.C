@@ -11,7 +11,7 @@ void sim(Int_t nev=10) {
 
   // ------------------------------------------------------------------
   // anchor simulation to a run and OCDB
-  simulator->SetRunNumber(265525); // p-Pb 2016
+  simulator.SetRunNumber(265525); // p-Pb 2016
   
   simulator.SetDefaultStorage
     ( "local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB" );
