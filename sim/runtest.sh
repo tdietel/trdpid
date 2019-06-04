@@ -32,3 +32,7 @@ ln -s ../raw.root
 aliroot -b -q ../../rawrec.C 2>&1 | tee rawrec.log
 #aliroot -b -q  2>&1 aod.C | tee aod.log
 
+# analyse the data
+aliroot ../../run1.C 2>&1 | tee run1.log
+
+
