@@ -4,7 +4,7 @@
 mkdir -p test
 cd test
 ln -sf ../Config.C Config.C
-ln -sf ../rec.C rec.C
+ln -sf ../sim.C sim.C
 ln -sf ../rec.C rec.C
 
 ls -la
@@ -26,8 +26,9 @@ aliroot -b -q ${ALICE_ROOT}/STEER/macros/CheckESD.C 2>&1 | tee check.log
 #aliroot -b -q aod.C 2>&1 | tee aod.log
 
 # run the raw reconstruction 
+mkdir recraw
 cd recraw
 ln -s ../raw.root
-aliroot -b -q ../rec.C 2>&1 | tee rec.log
+aliroot -b -q ../../rawrec.C 2>&1 | tee rawrec.log
 #aliroot -b -q  2>&1 aod.C | tee aod.log
 
