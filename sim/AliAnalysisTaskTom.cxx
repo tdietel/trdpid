@@ -20,6 +20,12 @@
 
 #include "AliAnalysisTaskTom.h"
 
+#include <iostream>
+
+using std::cerr;
+using std::cout;
+using std::endl;
+
 // example of an analysis task creating a p_t spectrum
 // Authors: Panos Cristakoglou, Jan Fiete Grosse-Oetringhaus, Christian Klein-Boesing
 // Reviewed: A.Gheata (19/02/10)
@@ -112,7 +118,7 @@ void AliAnalysisTaskTom::UserExec(Option_t *)
       continue;
     }
 
-    AliESDfriendTrack* friendtrack = fESDfriend->GetTrack(iTracks);
+    AliESDfriendTrack* friendtrack = (AliESDfriendTrack*)fESDfriend->GetTrack(iTracks);
     if (!friendtrack) {
       printf("ERROR: Could not receive frienttrack %d\n", iTracks);
       continue;
