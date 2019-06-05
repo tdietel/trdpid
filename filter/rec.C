@@ -9,7 +9,7 @@ void rec(const char *filename="raw.root")
   
   // Set the CDB storage location
   AliCDBManager * man = AliCDBManager::Instance();
-  man->SetDefaultStorage("alien://folder=/alice/data/2016/OCDB");
+  man->SetDefaultStorage("alien://folder=/alice/data/2018/OCDB");
 
   AliLog::SetClassDebugLevel("AliTRDReconstructor", 1);
   
