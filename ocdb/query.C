@@ -60,8 +60,14 @@ void query(Int_t year=2016, Int_t run=265377)
 
   // set up the connection to the OCDB
   AliCDBManager* man = AliCDBManager::Instance();
-  man->SetDefaultStorage
-    (Form("local:///cvmfs/alice-ocdb.cern.ch/calibration/data/%d/OCDB/",year));
+
+  if (0) {
+    man->SetDefaultStorage
+      (Form("local:///cvmfs/alice-ocdb.cern.ch/calibration/data/%d/OCDB/",year));
+  } else {
+    man->SetDefaultStorage
+      (Form("alien://folder=/alice/data/%d/OCDB/",year));
+  }
   
   man->SetCacheFlag(kTRUE);
   man->SetRun(run);
