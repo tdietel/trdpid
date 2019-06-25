@@ -24,9 +24,11 @@ void sim(Int_t nev=10) {
   
   // ------------------------------------------------------------------
   // Set simulation parameters
-  simulator.SetMakeSDigits("TRD TOF PHOS HMPID EMCAL MUON FMD ZDC PMD T0 VZERO ACORDE");
+  //simulator.SetMakeSDigits("TRD TOF HMPID EMCAL MUON FMD ZDC PMD T0 VZERO ACORDE");
+  simulator.SetMakeSDigits("TRD");
+  simulator.SetMakeDigits("TRD");
   simulator.SetMakeDigitsFromHits("ITS TPC");
-  simulator.SetWriteRawData("ALL","raw.root",kTRUE);
+  simulator.SetWriteRawData("TRD TOF HMPID EMCAL MUON FMD ZDC PMD T0","raw.root",kTRUE);
 
 
   // ------------------------------------------------------------------
