@@ -1,41 +1,64 @@
-void sim(Int_t nev=10) {
+void sim(Int_t nev=1, Int_t run=265343) {
 
-  // libraries required by geant321
   gSystem->Load("liblhapdf");
   gSystem->Load("libEGPythia6");
   gSystem->Load("libpythia6");
   gSystem->Load("libAliPythia6");
+  gSystem->Load("libHIJING");
+  gSystem->Load("libTHijing");
   gSystem->Load("libgeant321");
-
+  
   AliSimulation simulator;
+     simulator.SetRunNumber(run);
 
-  // ------------------------------------------------------------------
-  // anchor simulation to a run and OCDB
-  simulator.SetRunNumber(265525); // p-Pb 2016
-  
-  simulator.SetDefaultStorage
-    ( "local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB" );
-  //( "local:///cvmfs/alice-ocdb.cern.ch/calibration/MC/Residual/");
+       simulator.SetMakeSDigits("TRD TOF PHOS HMPID EMCAL MUON ZDC PMD T0 VZERO FMD");
+       //  simulator.SetMakeSDigits("TRD TOF PHOS HMPID EMCAL MUON ZDC T0");
+     //     simulator.SetMakeSDigits("");
+     simulator.SetMakeDigitsFromHits("ITS TPC");
 
-  //simulator.SetSpecificStorage( "",
-  //				"local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB");
-  //				Form("local://%s/miniocdb",gSystem->pwd()));
-  
-  
-  // ------------------------------------------------------------------
-  // Set simulation parameters
-  //simulator.SetMakeSDigits("TRD TOF HMPID EMCAL MUON FMD ZDC PMD T0 VZERO ACORDE");
-  simulator.SetMakeSDigits("TRD");
-  simulator.SetMakeDigits("TRD");
-  simulator.SetMakeDigitsFromHits("ITS TPC");
-  simulator.SetWriteRawData("TRD TOF HMPID EMCAL MUON FMD ZDC PMD T0","raw.root",kTRUE);
+//
+// RAW OCDB
+//
+  simulator.SetDefaultStorage("local:///cvmfs/alice-ocdb.cern.ch/calibration/data/2016/OCDB");
 
+//
+// ITS  (1 Total)
+//     Alignment from Ideal OCDB 
+  // simulator.SetSpecificStorage("ITS/Align/Data",           "local:///cvmfs/alice-ocdb.cern.ch/simulation/2008/v4-15-Release/Ideal");
+  simulator.SetSpecificStorage("ITS/Align/Data",           "local:///cvmfs/alice-ocdb.cern.ch/calibration/MC/Ideal");
+//
+// MUON  (1 Total)
+//     MCH                                                                                                                    
+  simulator.SetSpecificStorage("MUON/Align/Data",          "local:///cvmfs/alice-ocdb.cern.ch/calibration/MC/Ideal");
 
-  // ------------------------------------------------------------------
-  // run the simulation
-  TStopwatch timer;
-  timer.Start();
+//                                                                                                                                    
+// TPC (7 total)
+//                                                                                                                      
+  simulator.SetSpecificStorage("TPC/Calib/TimeGain",       "local:///cvmfs/alice-ocdb.cern.ch/calibration/MC/Ideal");
+  simulator.SetSpecificStorage("TPC/Calib/ClusterParam",   "local:///cvmfs/alice-ocdb.cern.ch/calibration/MC/Ideal");
+  simulator.SetSpecificStorage("TPC/Calib/AltroConfig",    "local:///cvmfs/alice-ocdb.cern.ch/calibration/MC/Ideal");
+  simulator.SetSpecificStorage("TPC/Calib/Correction",     "local:///cvmfs/alice-ocdb.cern.ch/calibration/MC/Ideal");
+  simulator.SetSpecificStorage("TPC/Align/Data",           "local:///cvmfs/alice-ocdb.cern.ch/calibration/MC/Ideal");
+  simulator.SetSpecificStorage("TPC/Calib/TimeDrift",      "local:///cvmfs/alice-ocdb.cern.ch/calibration/MC/Ideal");
+  simulator.SetSpecificStorage("TPC/Calib/RecoParam",      "local:///cvmfs/alice-ocdb.cern.ch/calibration/MC/Residual/");
+
+//
+// Vertex and Mag. field from OCDB
+//
+  simulator.UseVertexFromCDB();
+  simulator.UseMagFieldFromGRP();
+
+/
+// simulate HLT TPC clusters, trigger, and HLT ESD
+//
+//  simulator.SetRunHLT("chains=TPC-compression,GLOBAL-Trigger,GLOBAL-esd-converter");
+
+//
+// The rest
+//
+  simulator.SetRunQA(":");
+
+  printf("Before simulator.Run(nev);\n");
   simulator.Run(nev);
-  timer.Stop();
-  timer.Print();
+  printf("After simulator.Run(nev);\n");
 }
