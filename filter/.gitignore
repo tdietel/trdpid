@@ -1,3 +1,11 @@
 test
 *.eps
 *.png
+AnalysisResults.root
+DigitsFilter.root
+myTask*
+myAnalysis.C
+wn.xml
+000*.xml
+stdout
+stderr
