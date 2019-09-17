@@ -13,17 +13,17 @@
 using namespace std;
 #endif
 
-void filter(int mode)
+void filter(TString mode="local", TString jobname="r1")
 {
 
-  // Boolean defining how the analysis should be run
-  Bool_t local, gridTest;
-
-  switch (mode) {
-    case 0:  local = kTRUE;   gridTest = kTRUE;    break;
-    case 1:  local = kFALSE;  gridTest = kTRUE;    break;
-    case 2:  local = kFALSE;  gridTest = kFALSE;   break;
-  }
+  // // Boolean defining how the analysis should be run
+  // Bool_t local, gridTest;
+  //
+  // switch (mode) {
+  //   case 0:  local = kTRUE;   gridTest = kTRUE;    break;
+  //   case 1:  local = kFALSE;  gridTest = kTRUE;    break;
+  //   case 2:  local = kFALSE;  gridTest = kFALSE;   break;
+  // }
 
 #if !defined (__CINT__) || defined (__CLING__)
   gInterpreter->ProcessLine(".include $ROOTSYS/include");
@@ -110,7 +110,7 @@ gInterpreter->ExecuteMacro("$ALICE_PHYSICS/PWGPP/TRD/macros/AddTRDdigitsFilter.C
   if (!mgr->InitAnalysis()) return;
   mgr->PrintStatus();
 
-  if (local){ // run macro on the local machine
+  if ( mode == "local") { // run macro on the local machine
     TChain* chain = new TChain("esdTree");
 
     //------------------------ ST JOHN EDIT --------------------------------------//
@@ -120,7 +120,7 @@ gInterpreter->ExecuteMacro("$ALICE_PHYSICS/PWGPP/TRD/macros/AddTRDdigitsFilter.C
     // start the analysis locally, reading the events from the tchain
     mgr->StartAnalysis("local", chain, 1000000000);
 
-  }else{ // run macro on the GRID
+  } else { // run macro on the GRID
     AliAnalysisAlien *alienHandler = new AliAnalysisAlien();
 
     alienHandler->AddIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/include -I$ALICE_PHYSICS/include");
@@ -132,30 +132,28 @@ gInterpreter->ExecuteMacro("$ALICE_PHYSICS/PWGPP/TRD/macros/AddTRDdigitsFilter.C
     alienHandler->SetAliPhysicsVersion("vAN-20190903_ROOT6-1");
     alienHandler->SetAPIVersion("V1.1x"); // set the alien API version
 
-
-
     // ----------------- ST JOHN EDIT --------------------------- //
     //alienHandler->SetGridDataDir("/alice/data/2016/LHC16q/");
     alienHandler->SetGridDataDir("/alice/data/2018/LHC18r");
-    //alienHandler->SetDataPattern("pass1_CENT_wSDD/*/*ESDs.root"); 
+    //alienHandler->SetDataPattern("pass1_CENT_wSDD/*/*ESDs.root");
     alienHandler->SetDataPattern("pass1/*/*ESDs.root");
     //
     alienHandler->SetRunPrefix("000");
 
     // specify the run number of the files to runu the analysis on
-    alienHandler->AddRunNumber(296934);
+    // alienHandler->AddRunNumber(296934); // 760k events
+    alienHandler->AddRunNumber(296835); // 62k events
     // ---------------------------------------------------------- //
 
 
 
     // number of files per subjob
-    alienHandler->SetSplitMaxInputFileNumber(40);
-    TString name = "myTask";
+    alienHandler->SetSplitMaxInputFileNumber(30);
 
-    alienHandler->SetExecutable(name+".sh");
+    alienHandler->SetExecutable("digfilter_"+jobname+".sh");
 
     alienHandler->SetTTL(10000);
-    alienHandler->SetJDLName(name+".jdl");
+    alienHandler->SetJDLName("digfilter_"+jobname+".jdl");
 
     alienHandler->SetOutputToRunNo(kTRUE);
     alienHandler->SetKeepLogs(kTRUE);
@@ -163,31 +161,50 @@ gInterpreter->ExecuteMacro("$ALICE_PHYSICS/PWGPP/TRD/macros/AddTRDdigitsFilter.C
     alienHandler->SetDefaultOutputs(kFALSE);
 
     //----------------- ST JOHN EDIT ---------------------------
-    alienHandler->SetOutputFiles("DigitsFilter.root");
+    alienHandler->SetOutputFiles("DigitsFilter.root,AnalysisResults.root");
     //----------------------------------------------------------
 
     //TString archive = "log_archive.zip:stdout,stderr,pythonDict.txt root_archive.zip:";
     //alienHandler->SetOutputArchive("log_archive.zip:stdout,stderr,pythonDict.txt root_archive.zip:DigitsExtractQA.root");
-    alienHandler->SetOutputArchive("log_archive.zip:stdout,stderr root_archive.zip:DigitsFilter.root");
+    alienHandler->SetOutputArchive("log_archive.zip:stdout,stderr root_archive.zip:DigitsFilter.root,AnalysisResults.root");
 
     alienHandler->SetMaxMergeStages(1);
     alienHandler->SetMergeViaJDL(kTRUE);
 
-    alienHandler->SetGridWorkingDir(Form("DigitsFilter-%s",nowstr));
+    //alienHandler->SetGridWorkingDir(Form("DigitsFilter-%s",nowstr));
+    alienHandler->SetGridWorkingDir("digfilter_"+jobname);
     alienHandler->SetGridOutputDir("output");
 
     mgr->SetGridHandler(alienHandler);
 
 
-    if (gridTest){ // run in test mode
+    if ( mode == "test" ) { // run in test mode
       alienHandler->SetNtestFiles(1);
 
       alienHandler->SetRunMode("test");
       mgr->StartAnalysis("grid");
-    }else{
+
+    } else if ( mode == "submit" ) { // run in test mode
+
       alienHandler->SetRunMode("full");
-      //alienHandler->SetRunMode("terminate");
       mgr->StartAnalysis("grid");
+
+    } else if ( mode == "merge" ) { // run in test mode
+
+      alienHandler->SetRunMode("terminate");
+      mgr->StartAnalysis("grid");
+
+    } else {
+
+      cout << "usage: aliroot 'filter.C(\"MODE\")'"  << endl
+           << endl
+           << "  where MODE is one of:" << endl
+           << "     local" << endl
+           << "     test" << endl
+           << "     submit" << endl
+           << "     merge" << endl
+           << endl;
+
     }
   }
 }
