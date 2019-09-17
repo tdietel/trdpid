@@ -1,0 +1,26 @@
+# timestamp 20190419
+# version: v1
+297595, 297590, 297588, 297558, 297544, 297542, 297541, 297540, 297537, 297512, 297483, 297481, 297479, 297452, 297451, 297450, 297446, 297442, 297441, 297415, 297414, 297413, 297380, 297379, 297372, 297367, 297366, 297363, 297336, 297335, 297333, 297332, 297317, 297311, 297310, 297278, 297222, 297221, 297218, 297196, 297195, 297193, 297133, 297132, 297129, 297128, 297085, 297035, 297031, 296966, 296941, 296938, 296935, 296934, 296932, 296931, 296930, 296903, 296900, 296899, 296894, 296852, 296851, 296850, 296848, 296839, 296838, 296836, 296835, 296799, 296794, 296793, 296790, 296787, 296786, 296785, 296784, 296781, 296752, 296694, 296693, 296691, 296690
+
+The following runs:
+
+297219, 297194, 297029, 296890, 296849, 296750, 296749
+
+have been excluded from the list because they are bad for TPC PID due to a problem in the TPC gain in one or two sectors, which happens at the end of the run: by excluding the problematic time range, the remaining events can be used for PID analyses.
+
+A new cut class allowing for removing these events has been developed.
+It can be either used as part of the "AliEventCuts" class and activated using "UseTimeRangeCut()".
+
+Or it can be used in a standalone way as follows:
+
+- in the task header add:
+AliTimeRangeCut fTimeRangeCut;
+and initialize it in the constructor.
+
+- in UserExec call:
+fTimeRangeCut.InitFromEvent(InputEvent());
+
+- Check if the event should be cut by using:
+const Bool_t cutThisEvent = fTimeRangeCut.CutEvent(InputEvent());
+
+ANALYZERS CAN ADD THESE 7 RUNS TO THE RUN LIST, IF INTERESTED (THEY CORRESPOND TO ~20% OF THE TOTAL STATISTICS) IF THEY USE ONE OF THE TWO ABOVE EVENT CUT METHODS.
