@@ -3,9 +3,11 @@ test
 *.png
 AnalysisResults.root
 DigitsFilter.root
+root_archive.zip
 myTask*
 myAnalysis.C
 wn.xml
 000*.xml
+Stage_1.xml
 stdout
 stderr
