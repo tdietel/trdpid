@@ -9,12 +9,21 @@ AliGenerator *GeneratorCustom(TString opt = "")
   // AliGenHijing *gh = (AliGenHijing*) Hijing();
   // gh->SetImpactParameterRange(14.9, 30.0);
 
-  AliGenFixed *gPionGun = new AliGenFixed(-2);
+  AliGenFixed *gPionGun = new AliGenFixed(2);
   gPionGun->SetMomentum(3);
-  gPionGun->SetPhiRange(0);
+  gPionGun->SetPhiRange(8./180.*TMath::Pi());
   gPionGun->SetThetaRange(0);
   gPionGun->SetOrigin(0.0,0.0,0.0);   //vertex position
   gPionGun->SetPart(211);
+
+  gener->AddGenerator(gPionGun, "Pion gun", 1.0);
+
+  AliGenBox* pionPlus = new AliGenBox(2); // pions+
+  pionPlus->SetPart(211);
+  pionPlus->SetPtRange(6., 50.);
+  pionPlus->SetYRange(-0.9, 0.9);
+
+  gener->AddGenerator(pionPlus,"pi+", 1);
 
   return gener;
 

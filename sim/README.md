@@ -1,25 +1,68 @@
 
-Simulation of TRD data
-======================
+TRD Simulation with AliRoot
+===========================
 
-This directory contains simulation code for AliRoot. The code was
-taken from a Hons project that ran in 2016 and needs some cleanup and
-tuning, but it should be a starting point.
+This directory contains a simple simulation of the TRD with AliRoot, using
+`dpgsim.sh`. The purpose of this simulation is to produces simulated TRD digits
+(and possibly also online tracklets and GTU tracks) for comparison with data
+and the new O2 simulation.
 
-Running the simulation
-----------------------
+The old simulation code found here, which was based on a 2016 honours project,
+and of which some fragments still linger around, is now obsolete and will be
+removed soon.
 
-The simulation can be run with the script `runtest.sh`, which
-* creates a directory `test`
-* symlinks sim.C, rec.C and Config.C into the test directory
-* runs sim.C and rec.C
+Overview
+--------
 
-A quick look at Config.C suggests that the simulation has not been
-tuned for TRD PID/sim studies. Ideally it should use a box generator
-for electrons and pions instead of a mix of all different kinds of
-things...
+The simulation consists of the following steps:
 
-The output should be usable by normal analysis macros - but I did not
-try this.
+- creation of OCDB snapshots for simulation and reconstruction
+- simulation
+- reconstruction
+- QA
 
+The first step, creation of OCDB snapshots, can be done once for all
+simulations. The following three steps are specific to each simulation setup.
+They will be executed in a directory specific for each setup, and controlled by
+a specific makefile.
 
+Usage
+-----
+
+### Preparation of AliRoot and AliDPG
+
+Apart from the usual dependencies, also AliDPG will be needed to run this
+simulation. `aliBuild` can be used to build everything:
+```
+aliBuild build AliDPG --defaults next-root6
+aliBuild build AliPhysics --defaults next-root6
+```
+
+Then one needs to set up both packages:
+```
+alienv enter AliPhysics/latest AliDPG/latest
+```
+
+A token is needed for some things:
+```
+alien-token-init
+```
+
+### Running the code
+
+Make sure you are in the correct directory:
+```
+cd PATH/TO/trdpid/sim/dpgsim
+```
+
+At the time of writing of this README, there were two simulations set up: *pythia* and *particlegun*, which can be run, respectively, with
+```
+make pythia
+make particlegun
+```
+
+The actual running of these simulations is controlled by `pythia.mk` and
+`particlegun.mk`, respectively. These two makefiles will be symlinked into the
+directory where the code will be run, and make will be called in these
+directories to produce the actual results. The makefiles pull in other ROOT
+macros and configuration files as needed.
