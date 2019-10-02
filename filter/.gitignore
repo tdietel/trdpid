@@ -3,6 +3,8 @@ test
 *.png
 AnalysisResults.root
 DigitsFilter.root
+TRD.Digits.root
+TRD.FltDigits.root
 root_archive.zip
 myTask*
 myAnalysis.C
