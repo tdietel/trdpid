@@ -61,7 +61,8 @@ void digitsqa( TString infilename="TRD.Digits.root",
            //   //int adc = digman->GetDigits(det)->GetDataBits(row,c,t);
            int adc = digman->GetDigitAmp(r,c,t,det);
 
-           //if (adc==-7169) continue;
+           // this value seems to indicate no digit -> skip
+           if (adc==-7169) continue;
 
            hAdc->Fill(adc);
 
