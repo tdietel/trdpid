@@ -1,5 +1,5 @@
 RUN     = 277312
-NEVENTS = 1
+NEVENTS = 10
 
 SIMDIR ?= ../
 

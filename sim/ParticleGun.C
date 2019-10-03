@@ -9,7 +9,7 @@ AliGenerator *GeneratorCustom(TString opt = "")
   // AliGenHijing *gh = (AliGenHijing*) Hijing();
   // gh->SetImpactParameterRange(14.9, 30.0);
 
-  AliGenFixed *gPionGun = new AliGenFixed(2);
+  AliGenFixed *gPionGun = new AliGenFixed(1);
   gPionGun->SetMomentum(3);
   gPionGun->SetPhiRange(8./180.*TMath::Pi());
   gPionGun->SetThetaRange(0);
@@ -20,7 +20,7 @@ AliGenerator *GeneratorCustom(TString opt = "")
 
   AliGenBox* pionPlus = new AliGenBox(2); // pions+
   pionPlus->SetPart(211);
-  pionPlus->SetPtRange(6., 50.);
+  pionPlus->SetPtRange(1., 3.);
   pionPlus->SetYRange(-0.9, 0.9);
 
   gener->AddGenerator(pionPlus,"pi+", 1);

@@ -18,8 +18,11 @@ particlegun.log: ocdb/277312/OCDBsim.root ocdb/277312/OCDBrec.root
 ocdb/%/OCDBsim.root: ocdb/%/snapshot.log
 ocdb/%/OCDBrec.root: ocdb/%/snapshot.log
 
+ocdb/277312/OCDBsim.root ocdb/277312/OCDBrec.root: ocdb/277312/snapshot.log
+
 ocdb/%/snapshot.log:
 	@echo "=== Running OCDB snapshot creation for run $* ==="
+	mkdir -p $(dir $@) 
 	cd $(dir $@) ; \
 	$(ALIDPG_ROOT)/bin/aliroot_dpgsim.sh --run $* --mode ocdb \
 	2>&1 | tee snapshot.log
