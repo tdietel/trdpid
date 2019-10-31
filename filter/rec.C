@@ -2,7 +2,8 @@ void rec(const char *filename="raw.root")
 {
   /////////////////////////////////////////////////////////////////////////////////////////
   //
-  // Reconstruction script for 2010 RAW data
+  // Reconstruction script to extract digits from a raw data file, without running the 
+  // full reconstruction chain. 
   //
   /////////////////////////////////////////////////////////////////////////////////////////
 
@@ -17,18 +18,18 @@ void rec(const char *filename="raw.root")
 
   // Set reconstruction flags (skip detectors here if neded with -<detector name>
 
-  rec.SetRunReconstruction("ALL");
+  rec.SetRunReconstruction("TRD");
 
   // QA options
   //  rec.SetRunQA("Global:ESDs") ;
-  //  rec.SetRunQA(":") ;
+  rec.SetRunQA(":") ;
   //  rec.SetRunQA("ALL:ALL") ;
-  rec.SetRunQA("Global MUON:ALL") ;
+  //rec.SetRunQA("Global MUON:ALL") ;
 
   rec.SetQARefDefaultStorage("local://$ALICE_ROOT/QAref") ;
 
   // AliReconstruction settings
-  rec.SetWriteESDfriend(kTRUE);
+  rec.SetWriteESDfriend(kFALSE);
   rec.SetWriteAlignmentData();
   rec.SetInput(filename);
   rec.SetUseTrackingErrorsForAlignment("ITS");
