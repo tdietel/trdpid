@@ -53,10 +53,10 @@ void filter(TString mode="local", TString jobname="r1")
   gSystem->AddIncludePath("-I$ALICE_PHYSICS/include");
 
   // get a string with the current time
-  time_t now;
-  time(&now);
-  char nowstr[20];
-  strftime(nowstr, sizeof nowstr, "%Y%m%d-%H%M%S", localtime(&now));
+  //time_t now;
+  //time(&now);
+  //char nowstr[20];
+  //strftime(nowstr, sizeof nowstr, "%Y%m%d-%H%M%S", localtime(&now));
 
   // Create the analysis manager
   AliAnalysisManager *mgr = new AliAnalysisManager("testAnalysis");
@@ -114,7 +114,29 @@ gInterpreter->ExecuteMacro("$ALICE_PHYSICS/PWGPP/TRD/macros/AddTRDdigitsFilter.C
     TChain* chain = new TChain("esdTree");
 
     //------------------------ ST JOHN EDIT --------------------------------------//
-    chain->Add("/Users/tom/alice/data/2018/LHC18r/000296934/18000296934019.100/AliESDs.root");
+    //chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934019.100/root_archive.zip#AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934019.1008/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934019.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934020.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934021.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934022.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934023.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934024.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934025.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934026.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934027.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934028.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934029.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934030.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934031.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934032.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934033.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934034.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934035.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934036.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934037.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934038.100/AliESDs.root");
+    chain->Add("/alice/data/2018/LHC18r/000296934/pass1/18000296934039.100/AliESDs.root");
     //----------------------------------------------------------------------------//
 
     // start the analysis locally, reading the events from the tchain
@@ -208,3 +230,5 @@ gInterpreter->ExecuteMacro("$ALICE_PHYSICS/PWGPP/TRD/macros/AddTRDdigitsFilter.C
     }
   }
 }
+
+
